@@ -1,0 +1,88 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Next.js
+frontend/.next/
+frontend/out/
+frontend/.vercel
+
+# Testing
+.coverage
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+coverage.xml
+*.cover
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+logs/
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Model cache
+model_cache/
+adapters/
+exports/
+*.pt
+*.pth
+*.bin
+*.safetensors
+
+# Audio files
+*.wav
+*.mp3
+*.flac
+*.ogg
+
+# Docker
+.docker/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary
+tmp/
+temp/
+*.tmp

@@ -1,0 +1,42 @@
+from pydantic_settings import BaseSettings
+from functools import lru_cache
+
+
+class Settings(BaseSettings):
+    # Application
+    app_name: str = "Text2Song Studio"
+    debug: bool = False
+
+    # Database
+    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/text2song"
+    database_url_sync: str = "postgresql://postgres:postgres@localhost:5432/text2song"
+
+    # S3/MinIO
+    s3_endpoint_url: str = "http://localhost:9000"
+    s3_access_key: str = "minioadmin"
+    s3_secret_key: str = "minioadmin"
+    s3_bucket_name: str = "text2song-audio"
+    s3_region: str = "us-east-1"
+
+    # Model
+    base_model_name: str = "facebook/musicgen-small"
+    model_cache_dir: str = "./model_cache"
+    adapters_dir: str = "./adapters"
+
+    # Generation
+    default_sample_rate: int = 32000
+    default_duration: int = 10
+    max_duration: int = 30
+    max_samples_per_request: int = 4
+
+    # CORS
+    cors_origins: list[str] = ["http://localhost:3000"]
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
