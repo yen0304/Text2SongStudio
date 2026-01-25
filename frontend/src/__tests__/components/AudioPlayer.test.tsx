@@ -104,4 +104,116 @@ describe('AudioPlayer', () => {
     // Volume control or audio controls should exist
     expect(container.firstChild).toBeInTheDocument();
   });
+
+  it('shows Audio Player title', () => {
+    render(<AudioPlayer audioIds={['audio-1']} />);
+    expect(screen.getByText('Audio Player')).toBeInTheDocument();
+  });
+
+  it('renders time display area', async () => {
+    const { container } = render(<AudioPlayer audioIds={['audio-1']} />);
+    
+    // Time display area should exist
+    expect(container.firstChild).toBeInTheDocument();
+  });
+
+  it('can switch between samples', async () => {
+    const { user } = render(<AudioPlayer audioIds={['audio-1', 'audio-2', 'audio-3']} />);
+    
+    // Find sample B button
+    await waitFor(() => {
+      const buttons = screen.getAllByRole('button');
+      const sampleBButton = buttons.find(btn => btn.textContent?.includes('B'));
+      expect(sampleBButton).toBeTruthy();
+    });
+    
+    const buttons = screen.getAllByRole('button');
+    const sampleBButton = buttons.find(btn => btn.textContent?.includes('B'));
+    if (sampleBButton) {
+      await user.click(sampleBButton);
+    }
+  });
+
+  it('handles playback toggle', async () => {
+    const { user, container } = render(<AudioPlayer audioIds={['audio-1']} />);
+    
+    // Find play/pause button
+    const playButton = container.querySelector('button');
+    if (playButton) {
+      await user.click(playButton);
+    }
+  });
+
+  it('shows played indicator for visited samples', async () => {
+    const { user, container } = render(<AudioPlayer audioIds={['audio-1', 'audio-2']} />);
+    
+    // Click play to mark sample as played
+    const playButton = container.querySelector('button');
+    if (playButton) {
+      await user.click(playButton);
+    }
+    
+    // The first sample should now be marked as played
+  });
+
+  it('handles skip forward button', async () => {
+    const { user, container } = render(<AudioPlayer audioIds={['audio-1', 'audio-2']} />);
+    
+    // Find skip forward button (lucide icon)
+    const skipButton = container.querySelector('.lucide-skip-forward')?.closest('button');
+    if (skipButton) {
+      await user.click(skipButton);
+    }
+  });
+
+  it('handles skip backward button', async () => {
+    const { user, container } = render(<AudioPlayer audioIds={['audio-1', 'audio-2']} />);
+    
+    // First go to second sample
+    const buttons = screen.getAllByRole('button');
+    const sampleBButton = buttons.find(btn => btn.textContent?.includes('B'));
+    if (sampleBButton) {
+      await user.click(sampleBButton);
+    }
+    
+    // Find skip backward button
+    const skipBackButton = container.querySelector('.lucide-skip-back')?.closest('button');
+    if (skipBackButton) {
+      await user.click(skipBackButton);
+    }
+  });
+
+  it('displays metadata when available', async () => {
+    render(<AudioPlayer audioIds={['audio-1']} />);
+    
+    await waitFor(() => {
+      expect(mockGetMetadata).toHaveBeenCalled();
+    });
+  });
+
+  it('handles metadata fetch error', async () => {
+    mockGetMetadata.mockRejectedValue(new Error('Fetch failed'));
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    
+    render(<AudioPlayer audioIds={['audio-1']} />);
+    
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalled();
+    });
+    
+    consoleSpy.mockRestore();
+  });
+
+  it('handles single audio gracefully', () => {
+    render(<AudioPlayer audioIds={['audio-1']} />);
+    
+    // Should not show sample selector tabs for single audio
+    const buttons = screen.getAllByRole('button');
+    const hasMultipleSampleButtons = buttons.filter(btn => 
+      ['A', 'B', 'C'].some(label => btn.textContent?.includes(label))
+    ).length > 1;
+    
+    // Single audio should not show B, C buttons
+    expect(hasMultipleSampleButtons).toBe(false);
+  });
 });

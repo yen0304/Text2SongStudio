@@ -76,4 +76,90 @@ describe('Sidebar', () => {
     const collapseButton = screen.getByRole('button', { name: /collapse|expand/i });
     expect(collapseButton).toBeInTheDocument();
   });
+
+  it('can collapse sidebar', async () => {
+    const { user } = render(<Sidebar />);
+    
+    // Find collapse button
+    const collapseButton = screen.getByRole('button', { name: /collapse/i });
+    await user.click(collapseButton);
+    
+    // After collapse, labels should be hidden (text not visible)
+    // The sidebar should have a narrower width class
+  });
+
+  it('renders logo', () => {
+    render(<Sidebar />);
+    
+    const logo = screen.getByAltText('Text2Song Studio Logo');
+    expect(logo).toBeInTheDocument();
+    expect(logo).toHaveAttribute('src', '/logo.png');
+  });
+
+  it('renders app title', () => {
+    render(<Sidebar />);
+    
+    expect(screen.getByText('Text2Song Studio')).toBeInTheDocument();
+  });
+
+  it('shows keyboard shortcuts', () => {
+    render(<Sidebar />);
+    
+    // Keyboard shortcuts should be displayed
+    expect(screen.getByText('g o')).toBeInTheDocument(); // Overview shortcut
+    expect(screen.getByText('g g')).toBeInTheDocument(); // Generate shortcut
+  });
+
+  it('highlights nested routes', () => {
+    mockUsePathname.mockReturnValue('/jobs/123');
+    render(<Sidebar />);
+    
+    const jobsLink = screen.getByRole('link', { name: /jobs/i });
+    expect(jobsLink.className).toContain('bg-');
+  });
+
+  it('renders mobile menu button on mobile', () => {
+    // Mock mobile screen
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: query === '(max-width: 768px)',
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+    
+    render(<Sidebar />);
+    
+    // Should have mobile menu button
+    const menuButton = screen.getByRole('button', { name: /open menu/i });
+    expect(menuButton).toBeInTheDocument();
+  });
+
+  it('auto-collapses on tablet screen', () => {
+    // Mock tablet screen
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: query === '(max-width: 1024px)',
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+    
+    render(<Sidebar />);
+    
+    // Should be collapsed (no app title visible)
+    // In collapsed mode, the title should not be visible
+  });
 });

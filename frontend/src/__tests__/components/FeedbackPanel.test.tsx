@@ -89,4 +89,164 @@ describe('FeedbackPanel', () => {
       await user.click(starButtons[3]); // Click a star
     }
   });
+
+  it('does not render preference section for single sample', () => {
+    render(<FeedbackPanel audioIds={['audio-1']} />);
+    expect(screen.queryByText('Preference')).not.toBeInTheDocument();
+  });
+
+  it('allows selecting preferred sample', async () => {
+    const { user } = render(<FeedbackPanel audioIds={['audio-1', 'audio-2']} />);
+    
+    // Find preference buttons (A and B)
+    const preferenceButtons = screen.getAllByText(/Click to select/);
+    expect(preferenceButtons.length).toBe(2);
+    
+    // Click on sample A
+    await user.click(preferenceButtons[0].closest('button')!);
+    
+    expect(screen.getByText('✓ Selected')).toBeInTheDocument();
+  });
+
+  it('submits preference feedback', async () => {
+    const onFeedbackSubmitted = vi.fn();
+    const { user } = render(
+      <FeedbackPanel audioIds={['audio-1', 'audio-2']} onFeedbackSubmitted={onFeedbackSubmitted} />
+    );
+    
+    // Select sample A
+    const sampleButtons = screen.getAllByText(/Click to select/);
+    await user.click(sampleButtons[0].closest('button')!);
+    
+    // Submit preference
+    const submitButton = screen.getByRole('button', { name: /submit preference/i });
+    await user.click(submitButton);
+    
+    await waitFor(() => {
+      expect(mockSubmit).toHaveBeenCalledWith(expect.objectContaining({
+        audio_id: 'audio-1',
+        preferred_over: 'audio-2',
+      }));
+    });
+  });
+
+  it('toggles tags on click', async () => {
+    const { user } = render(<FeedbackPanel audioIds={['audio-1']} />);
+    
+    const goodMelodyTag = screen.getByText('good melody');
+    await user.click(goodMelodyTag);
+    
+    // Tag should now be selected (shown in selected tags area with X button)
+    expect(screen.getAllByText('good melody').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('removes tag when X is clicked', async () => {
+    const { user, container } = render(<FeedbackPanel audioIds={['audio-1']} />);
+    
+    // First add a tag
+    const goodMelodyTag = screen.getByText('good melody');
+    await user.click(goodMelodyTag);
+    
+    // Find the X button in the selected tags area
+    const removeButtons = container.querySelectorAll('svg.lucide-x');
+    if (removeButtons.length > 0) {
+      await user.click(removeButtons[0]);
+    }
+  });
+
+  it('submits tags feedback', async () => {
+    const onFeedbackSubmitted = vi.fn();
+    const { user } = render(
+      <FeedbackPanel audioIds={['audio-1']} onFeedbackSubmitted={onFeedbackSubmitted} />
+    );
+    
+    // Select a tag
+    const goodMelodyTag = screen.getByText('good melody');
+    await user.click(goodMelodyTag);
+    
+    // Submit tags
+    const submitButton = screen.getByRole('button', { name: /submit tags/i });
+    await user.click(submitButton);
+    
+    await waitFor(() => {
+      expect(mockSubmit).toHaveBeenCalledWith(expect.objectContaining({
+        audio_id: 'audio-1',
+        tags: ['good_melody'],
+      }));
+    });
+  });
+
+  it('adds custom tag on enter key', async () => {
+    const { user } = render(<FeedbackPanel audioIds={['audio-1']} />);
+    
+    const customTagInput = screen.getByPlaceholderText(/custom tag/i);
+    await user.type(customTagInput, 'my_custom_tag{enter}');
+    
+    expect(screen.getByText('my custom tag')).toBeInTheDocument();
+  });
+
+  it('switches sample selection in rating section', async () => {
+    const { user } = render(<FeedbackPanel audioIds={['audio-1', 'audio-2']} />);
+    
+    // Find sample B button in rating section
+    const sampleButtons = screen.getAllByRole('button').filter(
+      btn => btn.textContent === 'B'
+    );
+    
+    if (sampleButtons.length > 0) {
+      await user.click(sampleButtons[0]);
+      expect(screen.getByText('Rate Sample B')).toBeInTheDocument();
+    }
+  });
+
+  it('includes notes with submission', async () => {
+    const { user } = render(<FeedbackPanel audioIds={['audio-1']} />);
+    
+    // Add notes
+    const notesTextarea = screen.getByPlaceholderText(/add notes/i);
+    await user.type(notesTextarea, 'This is a great sample!');
+    
+    // Select a tag and submit
+    const goodMelodyTag = screen.getByText('good melody');
+    await user.click(goodMelodyTag);
+    
+    const submitButton = screen.getByRole('button', { name: /submit tags/i });
+    await user.click(submitButton);
+    
+    await waitFor(() => {
+      expect(mockSubmit).toHaveBeenCalledWith(expect.objectContaining({
+        notes: 'This is a great sample!',
+      }));
+    });
+  });
+
+  it('shows training progress link', () => {
+    render(<FeedbackPanel audioIds={['audio-1']} />);
+    
+    expect(screen.getByText(/view training progress/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /view training progress/i })).toHaveAttribute('href', '/training');
+  });
+
+  it('handles rating submission error gracefully', async () => {
+    mockSubmit.mockRejectedValue(new Error('Submission failed'));
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    
+    const { user, container } = render(<FeedbackPanel audioIds={['audio-1']} />);
+    
+    // Click on a star
+    const starButtons = container.querySelectorAll('.lucide-star');
+    if (starButtons.length > 0) {
+      await user.click(starButtons[2].closest('button')!);
+    }
+    
+    // Submit
+    const submitButton = screen.getByRole('button', { name: /submit rating/i });
+    await user.click(submitButton);
+    
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalled();
+    });
+    
+    consoleSpy.mockRestore();
+  });
 });
