@@ -8,7 +8,9 @@
       "Bash(ss:*)",
       "Bash(PGPASSWORD=postgres psql:*)",
       "Bash(docker exec:*)",
-      "Bash(uv add:*)"
+      "Bash(uv add:*)",
+      "Bash(openspec list:*)",
+      "Bash(openspec validate:*)"
     ]
   },
   "enabledPlugins": {
