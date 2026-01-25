@@ -45,22 +45,26 @@ By participating in this project, you agree to maintain a respectful and inclusi
    git remote add upstream https://github.com/your-org/text2song-studio.git
    ```
 
-4. Set up the backend:
+4. **Install Git Hooks (Required):**
+   ```bash
+   # From the project root - this sets up Husky pre-commit and pre-push hooks
+   npm install
+   ```
+   This ensures your commits and pushes pass the same checks as CI.
+
+5. Set up the backend:
    ```bash
    cd backend
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r requirements.txt
-   pip install -r requirements-dev.txt  # Development dependencies
+   uv sync --all-extras --dev
    ```
 
-5. Set up the frontend:
+6. Set up the frontend:
    ```bash
    cd frontend
    npm install
    ```
 
-6. Copy the environment template:
+7. Copy the environment template:
    ```bash
    cp .env.example .env
    ```

@@ -1,0 +1,40 @@
+#!/bin/sh
+
+echo "🚀 Running pre-push checks to match CI..."
+
+# Check if frontend files were changed
+FRONTEND_CHANGED=$(git diff --name-only @{push}.. -- frontend/ 2>/dev/null || git diff --name-only HEAD~1 -- frontend/)
+BACKEND_CHANGED=$(git diff --name-only @{push}.. -- backend/ 2>/dev/null || git diff --name-only HEAD~1 -- backend/)
+
+# Frontend checks
+if [ -n "$FRONTEND_CHANGED" ] || [ "$1" = "--all" ]; then
+  echo "📦 Frontend: Running lint..."
+  cd frontend && npm run lint || exit 1
+  
+  echo "📦 Frontend: Running type check..."
+  npm run type-check || exit 1
+  
+  echo "📦 Frontend: Running tests..."
+  npm run test:run || exit 1
+  
+  echo "📦 Frontend: Running build..."
+  npm run build || exit 1
+  
+  cd ..
+fi
+
+# Backend checks
+if [ -n "$BACKEND_CHANGED" ] || [ "$1" = "--all" ]; then
+  echo "🐍 Backend: Running ruff format check..."
+  cd backend && uv run ruff format --check . || exit 1
+  
+  echo "🐍 Backend: Running ruff lint..."
+  uv run ruff check . || exit 1
+  
+  echo "🐍 Backend: Running tests..."
+  uv run pytest || exit 1
+  
+  cd ..
+fi
+
+echo "✅ All pre-push checks passed!"

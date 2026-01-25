@@ -142,14 +142,21 @@ docker-compose up -d
 
 ### Development Setup
 
+**1. Install Git Hooks (Required):**
+
+```bash
+# From the project root
+npm install
+```
+
+This sets up Husky git hooks that run linting, type checking, and tests before commits and pushes to ensure CI will pass.
+
 **Backend:**
 
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+uv sync --all-extras --dev
+uv run uvicorn app.main:app --reload
 ```
 
 **Frontend:**
