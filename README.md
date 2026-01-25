@@ -469,9 +469,13 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## Contact
 
-- **Issues**: [GitHub Issues](https://github.com/your-org/text2song-studio/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-org/text2song-studio/discussions)
+- **Issues**: [GitHub Issues](https://github.com/yen0304/Text2SongStudio/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yen0304/Text2SongStudio/discussions)
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=yen0304/Text2SongStudio&type=Date)](https://star-history.com/#yen0304/Text2SongStudio&Date)
 
 ---
 
-If you find this project useful, please consider giving it a star on GitHub.
+If you find this project useful, please consider giving it a star ⭐ on GitHub!
