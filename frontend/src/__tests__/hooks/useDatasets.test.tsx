@@ -3,21 +3,21 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { useDatasets } from '@/hooks/useDatasets';
 import { createMockDataset } from '@/__mocks__/api';
 
-// Mock the api module
-const mockListDatasets = vi.fn();
+// Mock the api module with modular APIs
+const mockList = vi.fn();
 vi.mock('@/lib/api', () => ({
-  api: {
-    listDatasets: (...args: unknown[]) => mockListDatasets(...args),
+  datasetsApi: {
+    list: (...args: unknown[]) => mockList(...args),
   },
 }));
 
 describe('useDatasets', () => {
   beforeEach(() => {
-    mockListDatasets.mockClear();
+    mockList.mockClear();
   });
 
   it('returns loading state initially', () => {
-    mockListDatasets.mockReturnValue(new Promise(() => {})); // Never resolves
+    mockList.mockReturnValue(new Promise(() => {})); // Never resolves
     
     const { result } = renderHook(() => useDatasets());
     
@@ -31,7 +31,7 @@ describe('useDatasets', () => {
       createMockDataset({ id: 'dataset-1', name: 'Training Data' }),
       createMockDataset({ id: 'dataset-2', name: 'Validation Data' }),
     ];
-    mockListDatasets.mockResolvedValue({ items: mockDatasets, total: 2 });
+    mockList.mockResolvedValue({ items: mockDatasets, total: 2 });
 
     const { result } = renderHook(() => useDatasets());
 
@@ -43,7 +43,7 @@ describe('useDatasets', () => {
   });
 
   it('handles error state', async () => {
-    mockListDatasets.mockRejectedValue(new Error('API Error'));
+    mockList.mockRejectedValue(new Error('API Error'));
 
     const { result } = renderHook(() => useDatasets());
 
@@ -55,7 +55,7 @@ describe('useDatasets', () => {
   });
 
   it('handles non-Error rejections', async () => {
-    mockListDatasets.mockRejectedValue('string error');
+    mockList.mockRejectedValue('string error');
 
     const { result } = renderHook(() => useDatasets());
 
@@ -71,7 +71,7 @@ describe('useDatasets', () => {
       createMockDataset({ id: 'dataset-2' }),
     ];
     
-    mockListDatasets
+    mockList
       .mockResolvedValueOnce({ items: initialDatasets, total: 1 })
       .mockResolvedValueOnce({ items: updatedDatasets, total: 2 });
 

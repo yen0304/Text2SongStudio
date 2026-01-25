@@ -2,18 +2,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@/test-utils';
 import { FeedbackPanel } from '@/components/FeedbackPanel';
 
-// Mock the api module
-const mockSubmitFeedback = vi.fn();
+// Mock the api module with modular APIs
+const mockSubmit = vi.fn();
 vi.mock('@/lib/api', () => ({
-  api: {
-    submitFeedback: (...args: unknown[]) => mockSubmitFeedback(...args),
+  feedbackApi: {
+    submit: (...args: unknown[]) => mockSubmit(...args),
   },
 }));
 
 describe('FeedbackPanel', () => {
   beforeEach(() => {
-    mockSubmitFeedback.mockClear();
-    mockSubmitFeedback.mockResolvedValue({ id: 'feedback-1' });
+    mockSubmit.mockClear();
+    mockSubmit.mockResolvedValue({ id: 'feedback-1' });
   });
 
   it('renders feedback panel', () => {

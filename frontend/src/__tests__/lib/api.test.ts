@@ -1,26 +1,30 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+/**
+ * Modular API Tests
+ * 
+ * These tests verify the modular API structure.
+ * For detailed API tests, see the test files in __tests__/lib/api/
+ */
+
 // Mock fetch globally
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-describe('API module', () => {
+describe('Modular API', () => {
   beforeEach(() => {
     mockFetch.mockClear();
   });
 
-  describe('fetchApi helper', () => {
-    it('makes GET requests with correct headers', async () => {
+  describe('promptsApi', () => {
+    it('list makes GET requests with correct headers', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ data: 'test' }),
+        json: () => Promise.resolve({ items: [], total: 0 }),
       });
 
-      // Import fresh to test actual implementation
-      const { api } = await import('@/lib/api');
-      
-      // This will trigger a fetch call
-      await api.listPrompts();
+      const { promptsApi } = await import('@/lib/api');
+      await promptsApi.list();
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('/prompts'),
@@ -32,43 +36,32 @@ describe('API module', () => {
       );
     });
 
-    it('handles API errors correctly', async () => {
+    it('get handles API errors correctly', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 404,
         json: () => Promise.resolve({ detail: 'Not found' }),
       });
 
-      const { api } = await import('@/lib/api');
-
-      await expect(api.getPrompt('nonexistent')).rejects.toThrow('Not found');
+      const { promptsApi } = await import('@/lib/api');
+      await expect(promptsApi.get('nonexistent')).rejects.toThrow('Not found');
     });
 
-    it('handles network errors', async () => {
+    it('get handles network errors', async () => {
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
-      const { api } = await import('@/lib/api');
-
-      await expect(api.getPrompt('test')).rejects.toThrow('Network error');
-    });
-  });
-
-  describe('API methods', () => {
-    beforeEach(() => {
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ items: [], total: 0 }),
-      });
+      const { promptsApi } = await import('@/lib/api');
+      await expect(promptsApi.get('test')).rejects.toThrow('Network error');
     });
 
-    it('createPrompt sends POST request with body', async () => {
+    it('create sends POST request with body', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ id: 'prompt-1', text: 'test' }),
       });
 
-      const { api } = await import('@/lib/api');
-      await api.createPrompt({ text: 'test prompt' });
+      const { promptsApi } = await import('@/lib/api');
+      await promptsApi.create({ text: 'test prompt' });
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('/prompts'),
@@ -78,15 +71,17 @@ describe('API module', () => {
         })
       );
     });
+  });
 
-    it('submitFeedback sends correct payload', async () => {
+  describe('feedbackApi', () => {
+    it('submit sends correct payload', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ id: 'feedback-1' }),
       });
 
-      const { api } = await import('@/lib/api');
-      await api.submitFeedback({
+      const { feedbackApi } = await import('@/lib/api');
+      await feedbackApi.submit({
         audio_id: 'audio-1',
         rating: 5,
         tags: ['good'],
@@ -101,36 +96,14 @@ describe('API module', () => {
       );
     });
 
-    it('getAudioStreamUrl returns correct URL', async () => {
-      const { api } = await import('@/lib/api');
-      const url = api.getAudioStreamUrl('audio-123');
-      
-      expect(url).toContain('/audio/audio-123/stream');
-    });
-
-    it('listAdapters handles activeOnly parameter', async () => {
+    it('list builds query params correctly', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ items: [], total: 0 }),
       });
 
-      const { api } = await import('@/lib/api');
-      await api.listAdapters({ activeOnly: true });
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('active_only=true'),
-        expect.any(Object)
-      );
-    });
-
-    it('listFeedback builds query params correctly', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ items: [], total: 0 }),
-      });
-
-      const { api } = await import('@/lib/api');
-      await api.listFeedback({ audio_id: 'audio-1', min_rating: 3 });
+      const { feedbackApi } = await import('@/lib/api');
+      await feedbackApi.list({ audio_id: 'audio-1', min_rating: 3 });
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringMatching(/audio_id=audio-1.*min_rating=3|min_rating=3.*audio_id=audio-1/),
@@ -138,7 +111,61 @@ describe('API module', () => {
       );
     });
 
-    it('getOverviewMetrics returns metrics data', async () => {
+    it('getStats returns stats data', async () => {
+      const mockStats = { total: 100, average_rating: 4.2 };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockStats),
+      });
+
+      const { feedbackApi } = await import('@/lib/api');
+      const result = await feedbackApi.getStats();
+
+      expect(result).toEqual(mockStats);
+    });
+  });
+
+  describe('audioApi', () => {
+    it('getStreamUrl returns correct URL', async () => {
+      const { audioApi } = await import('@/lib/api');
+      const url = audioApi.getStreamUrl('audio-123');
+      
+      expect(url).toContain('/audio/audio-123/stream');
+    });
+
+    it('getMetadata fetches audio metadata', async () => {
+      const mockMetadata = { id: 'audio-1', duration_seconds: 10 };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockMetadata),
+      });
+
+      const { audioApi } = await import('@/lib/api');
+      const result = await audioApi.getMetadata('audio-1');
+
+      expect(result).toEqual(mockMetadata);
+    });
+  });
+
+  describe('adaptersApi', () => {
+    it('list handles activeOnly parameter', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ items: [], total: 0 }),
+      });
+
+      const { adaptersApi } = await import('@/lib/api');
+      await adaptersApi.list({ activeOnly: true });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('active_only=true'),
+        expect.any(Object)
+      );
+    });
+  });
+
+  describe('metricsApi', () => {
+    it('getOverview returns metrics data', async () => {
       const mockMetrics = {
         pipeline: {
           generation: { total: 100, completed: 80, active: 5 },
@@ -153,20 +180,22 @@ describe('API module', () => {
         json: () => Promise.resolve(mockMetrics),
       });
 
-      const { api } = await import('@/lib/api');
-      const result = await api.getOverviewMetrics();
+      const { metricsApi } = await import('@/lib/api');
+      const result = await metricsApi.getOverview();
 
       expect(result).toEqual(mockMetrics);
     });
+  });
 
+  describe('generationApi', () => {
     it('listJobs fetches jobs with filters', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ items: [], total: 0 }),
       });
 
-      const { api } = await import('@/lib/api');
-      await api.listJobs({ status: 'pending' });
+      const { generationApi } = await import('@/lib/api');
+      await generationApi.listJobs({ status: 'pending' });
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('/jobs'),
@@ -174,78 +203,31 @@ describe('API module', () => {
       );
     });
 
-    it('getJobStatus fetches a specific job', async () => {
+    it('getStatus fetches a specific job', async () => {
       const mockJob = { id: 'job-1', status: 'completed' };
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockJob),
       });
 
-      const { api } = await import('@/lib/api');
-      const result = await api.getJobStatus('job-1');
+      const { generationApi } = await import('@/lib/api');
+      const result = await generationApi.getStatus('job-1');
 
       expect(result).toEqual(mockJob);
     });
 
-    it('cancelJob sends DELETE request', async () => {
+    it('cancel sends DELETE request', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(undefined),
       });
 
-      const { api } = await import('@/lib/api');
-      await api.cancelJob('job-1');
+      const { generationApi } = await import('@/lib/api');
+      await generationApi.cancel('job-1');
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('/generate/job-1'),
         expect.objectContaining({ method: 'DELETE' })
-      );
-    });
-
-    it('getAudioMetadata fetches audio metadata', async () => {
-      const mockMetadata = { id: 'audio-1', duration_seconds: 10 };
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve(mockMetadata),
-      });
-
-      const { api } = await import('@/lib/api');
-      const result = await api.getAudioMetadata('audio-1');
-
-      expect(result).toEqual(mockMetadata);
-    });
-
-    it('listDatasets fetches datasets', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ items: [], total: 0 }),
-      });
-
-      const { api } = await import('@/lib/api');
-      await api.listDatasets();
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/datasets'),
-        expect.any(Object)
-      );
-    });
-
-    it('createDataset sends dataset creation request', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ id: 'dataset-1' }),
-      });
-
-      const { api } = await import('@/lib/api');
-      await api.createDataset({
-        name: 'Test Dataset',
-        type: 'supervised',
-        filter_query: { min_rating: 4 },
-      });
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/datasets'),
-        expect.objectContaining({ method: 'POST' })
       );
     });
 
@@ -256,23 +238,71 @@ describe('API module', () => {
         json: () => Promise.resolve(mockFeedback),
       });
 
-      const { api } = await import('@/lib/api');
-      const result = await api.getJobFeedback('job-1');
+      const { generationApi } = await import('@/lib/api');
+      const result = await generationApi.getJobFeedback('job-1');
 
       expect(result).toEqual(mockFeedback);
     });
+  });
 
-    it('getFeedbackStats fetches feedback statistics', async () => {
-      const mockStats = { total: 100, average_rating: 4.2 };
+  describe('datasetsApi', () => {
+    it('list fetches datasets', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve(mockStats),
+        json: () => Promise.resolve({ items: [], total: 0 }),
       });
 
-      const { api } = await import('@/lib/api');
-      const result = await api.getFeedbackStats();
+      const { datasetsApi } = await import('@/lib/api');
+      await datasetsApi.list();
 
-      expect(result).toEqual(mockStats);
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/datasets'),
+        expect.any(Object)
+      );
+    });
+
+    it('create sends dataset creation request', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ id: 'dataset-1' }),
+      });
+
+      const { datasetsApi } = await import('@/lib/api');
+      await datasetsApi.create({
+        name: 'Test Dataset',
+        type: 'supervised',
+        filter_query: { min_rating: 4 },
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/datasets'),
+        expect.objectContaining({ method: 'POST' })
+      );
+    });
+  });
+
+  describe('Modular API exports', () => {
+    it('exports all modular APIs', async () => {
+      const apiModule = await import('@/lib/api');
+      
+      // Check that modular APIs are exported
+      expect(apiModule.promptsApi).toBeDefined();
+      expect(apiModule.audioApi).toBeDefined();
+      expect(apiModule.generationApi).toBeDefined();
+      expect(apiModule.feedbackApi).toBeDefined();
+      expect(apiModule.adaptersApi).toBeDefined();
+      expect(apiModule.datasetsApi).toBeDefined();
+      expect(apiModule.experimentsApi).toBeDefined();
+      expect(apiModule.abTestsApi).toBeDefined();
+      expect(apiModule.metricsApi).toBeDefined();
+    });
+
+    it('exports utility functions', async () => {
+      const apiModule = await import('@/lib/api');
+      
+      expect(apiModule.fetchApi).toBeDefined();
+      expect(apiModule.buildQueryString).toBeDefined();
+      expect(apiModule.ApiError).toBeDefined();
     });
   });
 });

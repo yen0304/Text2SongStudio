@@ -3,11 +3,11 @@ import { render, screen, waitFor } from '@/test-utils';
 import { AudioPlayer } from '@/components/AudioPlayer';
 
 // Mock the api module
-const mockGetAudioMetadata = vi.fn();
+const mockGetMetadata = vi.fn();
 vi.mock('@/lib/api', () => ({
-  api: {
-    getAudioMetadata: (...args: unknown[]) => mockGetAudioMetadata(...args),
-    getAudioStreamUrl: (id: string) => `http://localhost:8000/audio/${id}/stream`,
+  audioApi: {
+    getMetadata: (...args: unknown[]) => mockGetMetadata(...args),
+    getStreamUrl: (id: string) => `http://localhost:8000/audio/${id}/stream`,
   },
 }));
 
@@ -40,8 +40,8 @@ const mockAudioMetadata = {
 
 describe('AudioPlayer', () => {
   beforeEach(() => {
-    mockGetAudioMetadata.mockClear();
-    mockGetAudioMetadata.mockResolvedValue(mockAudioMetadata);
+    mockGetMetadata.mockClear();
+    mockGetMetadata.mockResolvedValue(mockAudioMetadata);
   });
 
   it('renders audio player container', () => {
@@ -53,8 +53,8 @@ describe('AudioPlayer', () => {
     render(<AudioPlayer audioIds={['audio-1', 'audio-2']} />);
     
     await waitFor(() => {
-      expect(mockGetAudioMetadata).toHaveBeenCalledWith('audio-1');
-      expect(mockGetAudioMetadata).toHaveBeenCalledWith('audio-2');
+      expect(mockGetMetadata).toHaveBeenCalledWith('audio-1');
+      expect(mockGetMetadata).toHaveBeenCalledWith('audio-2');
     });
   });
 

@@ -3,12 +3,12 @@ import { render, screen, waitFor } from '@/test-utils';
 import { DatasetCreateForm } from '@/components/training/DatasetCreateForm';
 
 // Mock the api module
-const mockCreateDataset = vi.fn();
-const mockPreviewDatasetCount = vi.fn();
+const mockCreate = vi.fn();
+const mockPreviewCount = vi.fn();
 vi.mock('@/lib/api', () => ({
-  api: {
-    createDataset: (...args: unknown[]) => mockCreateDataset(...args),
-    previewDatasetCount: (...args: unknown[]) => mockPreviewDatasetCount(...args),
+  datasetsApi: {
+    create: (...args: unknown[]) => mockCreate(...args),
+    previewCount: (...args: unknown[]) => mockPreviewCount(...args),
   },
 }));
 
@@ -17,12 +17,12 @@ describe('DatasetCreateForm', () => {
   const mockOnCancel = vi.fn();
 
   beforeEach(() => {
-    mockCreateDataset.mockClear();
-    mockPreviewDatasetCount.mockClear();
+    mockCreate.mockClear();
+    mockPreviewCount.mockClear();
     mockOnSuccess.mockClear();
     mockOnCancel.mockClear();
-    mockCreateDataset.mockResolvedValue({ id: 'dataset-1' });
-    mockPreviewDatasetCount.mockResolvedValue({ count: 50 });
+    mockCreate.mockResolvedValue({ id: 'dataset-1' });
+    mockPreviewCount.mockResolvedValue({ count: 50 });
   });
 
   it('renders create form', () => {
@@ -89,7 +89,7 @@ describe('DatasetCreateForm', () => {
     await user.click(submitButton);
     
     await waitFor(() => {
-      expect(mockCreateDataset).toHaveBeenCalledWith(
+      expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           name: 'Test Dataset',
           type: 'supervised',
@@ -113,7 +113,7 @@ describe('DatasetCreateForm', () => {
   });
 
   it('shows error message on API failure', async () => {
-    mockCreateDataset.mockRejectedValue(new Error('API Error'));
+    mockCreate.mockRejectedValue(new Error('API Error'));
     
     const { user } = render(<DatasetCreateForm onSuccess={mockOnSuccess} onCancel={mockOnCancel} />);
     
@@ -132,12 +132,12 @@ describe('DatasetCreateForm', () => {
     render(<DatasetCreateForm onSuccess={mockOnSuccess} onCancel={mockOnCancel} />);
     
     await waitFor(() => {
-      expect(mockPreviewDatasetCount).toHaveBeenCalled();
+      expect(mockPreviewCount).toHaveBeenCalled();
     });
   });
 
   it('disables submit button while loading', async () => {
-    mockCreateDataset.mockReturnValue(new Promise(() => {})); // Never resolves
+    mockCreate.mockReturnValue(new Promise(() => {})); // Never resolves
     
     const { user } = render(<DatasetCreateForm onSuccess={mockOnSuccess} onCancel={mockOnCancel} />);
     

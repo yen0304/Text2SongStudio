@@ -2,11 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@/test-utils';
 import { JobFeedbackPanel } from '@/components/JobFeedbackPanel';
 
-// Mock the api module
+// Mock the api module with modular APIs
 const mockGetJobFeedback = vi.fn();
+const mockDeleteFeedback = vi.fn();
 vi.mock('@/lib/api', () => ({
-  api: {
+  generationApi: {
     getJobFeedback: (...args: unknown[]) => mockGetJobFeedback(...args),
+  },
+  feedbackApi: {
+    delete: (...args: unknown[]) => mockDeleteFeedback(...args),
   },
 }));
 

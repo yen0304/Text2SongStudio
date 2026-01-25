@@ -3,21 +3,21 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { useAdapters } from '@/hooks/useAdapters';
 import { createMockAdapter } from '@/__mocks__/api';
 
-// Mock the api module
-const mockListAdapters = vi.fn();
+// Mock the api module with modular APIs
+const mockList = vi.fn();
 vi.mock('@/lib/api', () => ({
-  api: {
-    listAdapters: (...args: unknown[]) => mockListAdapters(...args),
+  adaptersApi: {
+    list: (...args: unknown[]) => mockList(...args),
   },
 }));
 
 describe('useAdapters', () => {
   beforeEach(() => {
-    mockListAdapters.mockClear();
+    mockList.mockClear();
   });
 
   it('returns loading state initially', () => {
-    mockListAdapters.mockReturnValue(new Promise(() => {})); // Never resolves
+    mockList.mockReturnValue(new Promise(() => {})); // Never resolves
     
     const { result } = renderHook(() => useAdapters());
     
@@ -28,7 +28,7 @@ describe('useAdapters', () => {
 
   it('fetches adapters on mount', async () => {
     const mockAdapters = [createMockAdapter({ id: 'adapter-1' }), createMockAdapter({ id: 'adapter-2' })];
-    mockListAdapters.mockResolvedValue({ items: mockAdapters, total: 2 });
+    mockList.mockResolvedValue({ items: mockAdapters, total: 2 });
 
     const { result } = renderHook(() => useAdapters());
 
@@ -40,7 +40,7 @@ describe('useAdapters', () => {
   });
 
   it('handles error state', async () => {
-    mockListAdapters.mockRejectedValue(new Error('API Error'));
+    mockList.mockRejectedValue(new Error('API Error'));
 
     const { result } = renderHook(() => useAdapters());
 
@@ -52,7 +52,7 @@ describe('useAdapters', () => {
   });
 
   it('handles non-Error rejections', async () => {
-    mockListAdapters.mockRejectedValue('string error');
+    mockList.mockRejectedValue('string error');
 
     const { result } = renderHook(() => useAdapters());
 
@@ -62,20 +62,20 @@ describe('useAdapters', () => {
   });
 
   it('passes activeOnly parameter to API', async () => {
-    mockListAdapters.mockResolvedValue({ items: [], total: 0 });
+    mockList.mockResolvedValue({ items: [], total: 0 });
 
     renderHook(() => useAdapters(true));
 
-    await waitFor(() => expect(mockListAdapters).toHaveBeenCalled());
+    await waitFor(() => expect(mockList).toHaveBeenCalled());
 
-    expect(mockListAdapters).toHaveBeenCalledWith({ activeOnly: true });
+    expect(mockList).toHaveBeenCalledWith({ activeOnly: true });
   });
 
   it('provides refresh function that refetches data', async () => {
     const initialAdapters = [createMockAdapter({ id: 'adapter-1' })];
     const updatedAdapters = [createMockAdapter({ id: 'adapter-1' }), createMockAdapter({ id: 'adapter-2' })];
     
-    mockListAdapters
+    mockList
       .mockResolvedValueOnce({ items: initialAdapters, total: 1 })
       .mockResolvedValueOnce({ items: updatedAdapters, total: 2 });
 
@@ -91,17 +91,17 @@ describe('useAdapters', () => {
   });
 
   it('refetches when activeOnly changes', async () => {
-    mockListAdapters.mockResolvedValue({ items: [], total: 0 });
+    mockList.mockResolvedValue({ items: [], total: 0 });
 
     const { rerender } = renderHook(
       ({ activeOnly }) => useAdapters(activeOnly),
       { initialProps: { activeOnly: false } }
     );
 
-    await waitFor(() => expect(mockListAdapters).toHaveBeenCalledWith({ activeOnly: false }));
+    await waitFor(() => expect(mockList).toHaveBeenCalledWith({ activeOnly: false }));
 
     rerender({ activeOnly: true });
 
-    await waitFor(() => expect(mockListAdapters).toHaveBeenCalledWith({ activeOnly: true }));
+    await waitFor(() => expect(mockList).toHaveBeenCalledWith({ activeOnly: true }));
   });
 });

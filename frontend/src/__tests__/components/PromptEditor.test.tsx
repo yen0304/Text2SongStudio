@@ -2,13 +2,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@/test-utils';
 import { PromptEditor } from '@/components/PromptEditor';
 
-// Mock the api module
-const mockCreatePrompt = vi.fn();
-const mockListAdapters = vi.fn();
+// Mock the api module with modular APIs
+const mockCreate = vi.fn();
+const mockList = vi.fn();
 vi.mock('@/lib/api', () => ({
-  api: {
-    createPrompt: (...args: unknown[]) => mockCreatePrompt(...args),
-    listAdapters: (...args: unknown[]) => mockListAdapters(...args),
+  adaptersApi: {
+    list: (...args: unknown[]) => mockList(...args),
+  },
+  promptsApi: {
+    create: (...args: unknown[]) => mockCreate(...args),
+  },
+  generationApi: {
+    submit: vi.fn().mockResolvedValue({ id: 'job-1', status: 'queued' }),
+    getStatus: vi.fn().mockResolvedValue({ id: 'job-1', status: 'completed', audio_ids: ['audio-1'] }),
   },
 }));
 
@@ -19,10 +25,10 @@ const defaultProps = {
 
 describe('PromptEditor', () => {
   beforeEach(() => {
-    mockCreatePrompt.mockClear();
-    mockListAdapters.mockClear();
-    mockCreatePrompt.mockResolvedValue({ id: 'prompt-1', text: 'test' });
-    mockListAdapters.mockResolvedValue({ items: [], total: 0 });
+    mockCreate.mockClear();
+    mockList.mockClear();
+    mockCreate.mockResolvedValue({ id: 'prompt-1', text: 'test' });
+    mockList.mockResolvedValue({ items: [], total: 0 });
     defaultProps.onPromptCreated.mockClear();
     defaultProps.onSamplesGenerated.mockClear();
   });

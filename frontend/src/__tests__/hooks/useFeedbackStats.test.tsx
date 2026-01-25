@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useFeedbackStats } from '@/hooks/useFeedbackStats';
 
-// Mock the api module
-const mockGetFeedbackStats = vi.fn();
+// Mock the api module with modular APIs
+const mockGetStats = vi.fn();
 vi.mock('@/lib/api', () => ({
-  api: {
-    getFeedbackStats: (...args: unknown[]) => mockGetFeedbackStats(...args),
+  feedbackApi: {
+    getStats: (...args: unknown[]) => mockGetStats(...args),
   },
 }));
 
@@ -20,11 +20,11 @@ const mockStats = {
 
 describe('useFeedbackStats', () => {
   beforeEach(() => {
-    mockGetFeedbackStats.mockClear();
+    mockGetStats.mockClear();
   });
 
   it('returns loading state initially', () => {
-    mockGetFeedbackStats.mockReturnValue(new Promise(() => {})); // Never resolves
+    mockGetStats.mockReturnValue(new Promise(() => {})); // Never resolves
     
     const { result } = renderHook(() => useFeedbackStats());
     
@@ -34,7 +34,7 @@ describe('useFeedbackStats', () => {
   });
 
   it('fetches feedback stats on mount', async () => {
-    mockGetFeedbackStats.mockResolvedValue(mockStats);
+    mockGetStats.mockResolvedValue(mockStats);
 
     const { result } = renderHook(() => useFeedbackStats());
 
@@ -45,7 +45,7 @@ describe('useFeedbackStats', () => {
   });
 
   it('handles error state', async () => {
-    mockGetFeedbackStats.mockRejectedValue(new Error('API Error'));
+    mockGetStats.mockRejectedValue(new Error('API Error'));
 
     const { result } = renderHook(() => useFeedbackStats());
 
@@ -57,7 +57,7 @@ describe('useFeedbackStats', () => {
   });
 
   it('handles non-Error rejections', async () => {
-    mockGetFeedbackStats.mockRejectedValue('string error');
+    mockGetStats.mockRejectedValue('string error');
 
     const { result } = renderHook(() => useFeedbackStats());
 
@@ -70,7 +70,7 @@ describe('useFeedbackStats', () => {
     const initialStats = { ...mockStats, total_feedback: 100 };
     const updatedStats = { ...mockStats, total_feedback: 150 };
     
-    mockGetFeedbackStats
+    mockGetStats
       .mockResolvedValueOnce(initialStats)
       .mockResolvedValueOnce(updatedStats);
 

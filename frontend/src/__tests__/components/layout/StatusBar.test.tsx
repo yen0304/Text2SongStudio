@@ -3,16 +3,16 @@ import { render, screen, waitFor } from '@/test-utils';
 import { StatusBar } from '@/components/layout/StatusBar';
 
 // Mock the api module
-const mockGetOverviewMetrics = vi.fn();
+const mockGetOverview = vi.fn();
 vi.mock('@/lib/api', () => ({
-  api: {
-    getOverviewMetrics: () => mockGetOverviewMetrics(),
+  metricsApi: {
+    getOverview: () => mockGetOverview(),
   },
 }));
 
 describe('StatusBar', () => {
   beforeEach(() => {
-    mockGetOverviewMetrics.mockResolvedValue({
+    mockGetOverview.mockResolvedValue({
       pipeline: {
         generation: { total: 100, completed: 80, active: 5 },
         feedback: { total: 200, rated_samples: 150, pending: 25 },
@@ -24,7 +24,7 @@ describe('StatusBar', () => {
   });
 
   afterEach(() => {
-    mockGetOverviewMetrics.mockClear();
+    mockGetOverview.mockClear();
   });
 
   it('renders status bar', async () => {
@@ -76,7 +76,7 @@ describe('StatusBar', () => {
   });
 
   it('handles API errors gracefully', async () => {
-    mockGetOverviewMetrics.mockRejectedValue(new Error('API Error'));
+    mockGetOverview.mockRejectedValue(new Error('API Error'));
     
     // Should not crash
     render(<StatusBar />);

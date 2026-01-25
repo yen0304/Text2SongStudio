@@ -2,11 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@/test-utils';
 import { FeedbackHistory } from '@/components/FeedbackHistory';
 
-// Mock the api module
-const mockListFeedback = vi.fn();
+// Mock the api module with modular APIs
+const mockList = vi.fn();
 vi.mock('@/lib/api', () => ({
-  api: {
-    listFeedback: (...args: unknown[]) => mockListFeedback(...args),
+  feedbackApi: {
+    list: (...args: unknown[]) => mockList(...args),
   },
 }));
 
@@ -38,8 +38,8 @@ const mockFeedbackData = {
 
 describe('FeedbackHistory', () => {
   beforeEach(() => {
-    mockListFeedback.mockClear();
-    mockListFeedback.mockResolvedValue(mockFeedbackData);
+    mockList.mockClear();
+    mockList.mockResolvedValue(mockFeedbackData);
   });
 
   it('renders feedback history component', async () => {
@@ -54,7 +54,7 @@ describe('FeedbackHistory', () => {
     render(<FeedbackHistory />);
     
     await waitFor(() => {
-      expect(mockListFeedback).toHaveBeenCalled();
+      expect(mockList).toHaveBeenCalled();
     });
   });
 
@@ -77,7 +77,7 @@ describe('FeedbackHistory', () => {
   });
 
   it('shows loading state initially', () => {
-    mockListFeedback.mockReturnValue(new Promise(() => {})); // Never resolves
+    mockList.mockReturnValue(new Promise(() => {})); // Never resolves
     render(<FeedbackHistory />);
     
     // Should show loading indicator
@@ -85,7 +85,7 @@ describe('FeedbackHistory', () => {
   });
 
   it('handles error state', async () => {
-    mockListFeedback.mockRejectedValue(new Error('API Error'));
+    mockList.mockRejectedValue(new Error('API Error'));
     render(<FeedbackHistory />);
     
     await waitFor(() => {
@@ -98,7 +98,7 @@ describe('FeedbackHistory', () => {
     render(<FeedbackHistory initialJobId="job-123" />);
     
     await waitFor(() => {
-      expect(mockListFeedback).toHaveBeenCalledWith(
+      expect(mockList).toHaveBeenCalledWith(
         expect.objectContaining({
           job_id: 'job-123',
         })
@@ -107,7 +107,7 @@ describe('FeedbackHistory', () => {
   });
 
   it('supports pagination', async () => {
-    mockListFeedback.mockResolvedValue({ items: [], total: 100 });
+    mockList.mockResolvedValue({ items: [], total: 100 });
     render(<FeedbackHistory />);
     
     await waitFor(() => {
@@ -121,7 +121,7 @@ describe('FeedbackHistory', () => {
     const { user } = render(<FeedbackHistory />);
     
     await waitFor(() => {
-      expect(mockListFeedback).toHaveBeenCalledTimes(1);
+      expect(mockList).toHaveBeenCalledTimes(1);
     });
 
     const searchInput = screen.getByPlaceholderText(/job id/i);
@@ -131,7 +131,7 @@ describe('FeedbackHistory', () => {
     await user.click(searchButton);
 
     await waitFor(() => {
-      expect(mockListFeedback).toHaveBeenCalledWith(
+      expect(mockList).toHaveBeenCalledWith(
         expect.objectContaining({
           job_id: 'job-456',
         })

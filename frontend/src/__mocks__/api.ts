@@ -62,16 +62,34 @@ export const createMockFeedback = (overrides?: Partial<Feedback>): Feedback => (
   ...overrides,
 });
 
-// Mock API object
-export const mockApi = {
-  // Prompts
-  createPrompt: vi.fn().mockResolvedValue(createMockPrompt()),
-  getPrompt: vi.fn().mockResolvedValue(createMockPrompt()),
-  listPrompts: vi.fn().mockResolvedValue({ items: [createMockPrompt()], total: 1 }),
+// =====================
+// Modular Mock APIs
+// =====================
 
-  // Generation
-  submitGeneration: vi.fn().mockResolvedValue({ id: 'job-1', status: 'queued' } as GenerationJob),
-  getJobStatus: vi.fn().mockResolvedValue({ id: 'job-1', status: 'completed', audio_ids: ['audio-1'] } as GenerationJob),
+/** Mock Prompts API */
+export const mockPromptsApi = {
+  create: vi.fn().mockResolvedValue(createMockPrompt()),
+  get: vi.fn().mockResolvedValue(createMockPrompt()),
+  list: vi.fn().mockResolvedValue({ items: [createMockPrompt()], total: 1 }),
+};
+
+/** Mock Audio API */
+export const mockAudioApi = {
+  getMetadata: vi.fn().mockResolvedValue({
+    id: 'audio-1',
+    prompt_id: 'prompt-1',
+    adapter_id: null,
+    duration_seconds: 10,
+    sample_rate: 44100,
+    created_at: '2024-01-01T00:00:00Z',
+  } as AudioSample),
+  getStreamUrl: vi.fn((id: string) => `http://localhost:8000/audio/${id}/stream`),
+};
+
+/** Mock Generation API */
+export const mockGenerationApi = {
+  submit: vi.fn().mockResolvedValue({ id: 'job-1', status: 'queued' } as GenerationJob),
+  getStatus: vi.fn().mockResolvedValue({ id: 'job-1', status: 'completed', audio_ids: ['audio-1'] } as GenerationJob),
   getJobFeedback: vi.fn().mockResolvedValue({
     job_id: 'job-1',
     prompt_id: 'prompt-1',
@@ -80,41 +98,59 @@ export const mockApi = {
     average_rating: 4,
     samples: [],
   } as JobFeedbackResponse),
-  cancelJob: vi.fn().mockResolvedValue(undefined),
+  cancel: vi.fn().mockResolvedValue(undefined),
+  listJobs: vi.fn().mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 }),
+  getJobStats: vi.fn().mockResolvedValue({
+    status_counts: { completed: 80, processing: 5, queued: 10, failed: 5 },
+    active_jobs: 15,
+    avg_processing_time_seconds: 30,
+    jobs_today: 20,
+    total_jobs: 100,
+  }),
+  getJob: vi.fn().mockResolvedValue(null),
+  deleteJob: vi.fn().mockResolvedValue({ status: 'deleted', job_id: 'job-1' }),
+};
 
-  // Audio
-  getAudioMetadata: vi.fn().mockResolvedValue({
-    id: 'audio-1',
-    prompt_id: 'prompt-1',
-    adapter_id: null,
-    duration_seconds: 10,
-    sample_rate: 44100,
-    created_at: '2024-01-01T00:00:00Z',
-  } as AudioSample),
-  getAudioStreamUrl: vi.fn((id: string) => `http://localhost:8000/audio/${id}/stream`),
+/** Mock Feedback API */
+export const mockFeedbackApi = {
+  submit: vi.fn().mockResolvedValue(createMockFeedback()),
+  get: vi.fn().mockResolvedValue([createMockFeedback()]),
+  list: vi.fn().mockResolvedValue({ items: [createMockFeedback()], total: 1 } as FeedbackListResponse),
+  delete: vi.fn().mockResolvedValue({ status: 'deleted', feedback_id: 'feedback-1' }),
+  getStats: vi.fn().mockResolvedValue({
+    total_feedback: 100,
+    total_ratings: 80,
+    total_preferences: 20,
+    rating_distribution: { 1: 10, 2: 15, 3: 25, 4: 30, 5: 20 },
+    high_rated_samples: 50,
+  } as FeedbackStats),
+};
 
-  // Feedback
-  submitFeedback: vi.fn().mockResolvedValue(createMockFeedback()),
-  getFeedback: vi.fn().mockResolvedValue([createMockFeedback()]),
-  listFeedback: vi.fn().mockResolvedValue({ items: [createMockFeedback()], total: 1 } as FeedbackListResponse),
+/** Mock Adapters API */
+export const mockAdaptersApi = {
+  list: vi.fn().mockResolvedValue({ items: [createMockAdapter()], total: 1 }),
+  getStats: vi.fn().mockResolvedValue({ total: 5, active: 3, archived: 2, total_versions: 10 }),
+  get: vi.fn().mockResolvedValue(createMockAdapter()),
+  getTimeline: vi.fn().mockResolvedValue(null),
+  create: vi.fn().mockResolvedValue(createMockAdapter()),
+  update: vi.fn().mockResolvedValue(createMockAdapter()),
+  delete: vi.fn().mockResolvedValue({ status: 'deleted', adapter_id: 'adapter-1' }),
+  createVersion: vi.fn().mockResolvedValue(null),
+  activateVersion: vi.fn().mockResolvedValue({ status: 'activated', version: '1.0.0' }),
+};
 
-  // Adapters
-  listAdapters: vi.fn().mockResolvedValue({ items: [createMockAdapter()], total: 1 }),
-  getAdapter: vi.fn().mockResolvedValue(createMockAdapter()),
-  activateAdapter: vi.fn().mockResolvedValue(createMockAdapter({ is_active: true })),
-  deactivateAdapter: vi.fn().mockResolvedValue(createMockAdapter({ is_active: false })),
-
-  // Datasets
-  listDatasets: vi.fn().mockResolvedValue({ items: [createMockDataset()], total: 1 }),
-  getDataset: vi.fn().mockResolvedValue(createMockDataset()),
-  createDataset: vi.fn().mockResolvedValue(createMockDataset()),
-  exportDataset: vi.fn().mockResolvedValue({
+/** Mock Datasets API */
+export const mockDatasetsApi = {
+  list: vi.fn().mockResolvedValue({ items: [createMockDataset()], total: 1 }),
+  get: vi.fn().mockResolvedValue(createMockDataset()),
+  create: vi.fn().mockResolvedValue(createMockDataset()),
+  export: vi.fn().mockResolvedValue({
     dataset_id: 'dataset-1',
     export_path: '/exports/dataset-1',
     sample_count: 100,
     format: 'jsonl',
   } as DatasetExport),
-  getDatasetStats: vi.fn().mockResolvedValue({
+  getStats: vi.fn().mockResolvedValue({
     dataset_id: 'dataset-1',
     sample_count: 100,
     total_samples: 200,
@@ -124,19 +160,33 @@ export const mockApi = {
     tag_frequency: { good_melody: 40, creative: 30 },
     avg_rating: 3.5,
   } as DatasetStats),
-  previewDatasetCount: vi.fn().mockResolvedValue({ count: 50 }),
+  previewCount: vi.fn().mockResolvedValue({ count: 50 }),
+};
 
-  // Feedback Stats
-  getFeedbackStats: vi.fn().mockResolvedValue({
-    total_feedback: 100,
-    total_ratings: 80,
-    total_preferences: 20,
-    rating_distribution: { 1: 10, 2: 15, 3: 25, 4: 30, 5: 20 },
-    high_rated_samples: 50,
-  } as FeedbackStats),
+/** Mock Experiments API */
+export const mockExperimentsApi = {
+  list: vi.fn().mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 }),
+  get: vi.fn().mockResolvedValue(null),
+  create: vi.fn().mockResolvedValue(null),
+  update: vi.fn().mockResolvedValue(null),
+  delete: vi.fn().mockResolvedValue(undefined),
+  createRun: vi.fn().mockResolvedValue(null),
+  getMetrics: vi.fn().mockResolvedValue(null),
+};
 
-  // Overview Metrics
-  getOverviewMetrics: vi.fn().mockResolvedValue({
+/** Mock A/B Tests API */
+export const mockAbTestsApi = {
+  list: vi.fn().mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 }),
+  get: vi.fn().mockResolvedValue(null),
+  create: vi.fn().mockResolvedValue(null),
+  generateSamples: vi.fn().mockResolvedValue(null),
+  submitVote: vi.fn().mockResolvedValue(null),
+  getResults: vi.fn().mockResolvedValue(null),
+};
+
+/** Mock Metrics API */
+export const mockMetricsApi = {
+  getOverview: vi.fn().mockResolvedValue({
     pipeline: {
       generation: { total: 100, completed: 80, active: 5 },
       feedback: { total: 200, rated_samples: 150, pending: 50 },
@@ -152,65 +202,47 @@ export const mockApi = {
       pending_feedback: 50,
     },
   }),
-  getFeedbackMetrics: vi.fn().mockResolvedValue({
+  getFeedback: vi.fn().mockResolvedValue({
     rating_distribution: { 1: 10, 2: 15, 3: 25, 4: 30, 5: 20 },
     by_adapter: [{ adapter_id: 'adapter-1', adapter_name: 'Test', count: 50, avg_rating: 4.0 }],
     preference_comparisons: 30,
     tagged_feedback: 60,
   }),
-
-  // Jobs
-  listJobs: vi.fn().mockResolvedValue({
-    items: [],
-    total: 0,
-    limit: 20,
-    offset: 0,
-  }),
-  getJobStats: vi.fn().mockResolvedValue({
-    status_counts: { completed: 80, processing: 5, queued: 10, failed: 5 },
-    active_jobs: 15,
-    avg_processing_time_seconds: 30,
-    jobs_today: 20,
-    total_jobs: 100,
-  }),
-
-  // Experiments
-  listExperiments: vi.fn().mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 }),
-  getExperiment: vi.fn().mockResolvedValue(null),
-  createExperiment: vi.fn().mockResolvedValue(null),
-  updateExperiment: vi.fn().mockResolvedValue(null),
-  deleteExperiment: vi.fn().mockResolvedValue(undefined),
-  createExperimentRun: vi.fn().mockResolvedValue(null),
-  getExperimentMetrics: vi.fn().mockResolvedValue(null),
-
-  // A/B Tests
-  listABTests: vi.fn().mockResolvedValue({ items: [], total: 0, limit: 20, offset: 0 }),
-  getABTest: vi.fn().mockResolvedValue(null),
-  createABTest: vi.fn().mockResolvedValue(null),
-  generateABTestSamples: vi.fn().mockResolvedValue(null),
-  submitABTestVote: vi.fn().mockResolvedValue(null),
-  getABTestResults: vi.fn().mockResolvedValue(null),
-
-  // V2 Adapters
-  listAdaptersV2: vi.fn().mockResolvedValue([]),
-  getAdapterStats: vi.fn().mockResolvedValue({ total: 0, active: 0, archived: 0, total_versions: 0 }),
-  getAdapterV2: vi.fn().mockResolvedValue(null),
-  getAdapterTimeline: vi.fn().mockResolvedValue(null),
-  createAdapterV2: vi.fn().mockResolvedValue(null),
-  updateAdapterV2: vi.fn().mockResolvedValue(null),
-  deleteAdapterV2: vi.fn().mockResolvedValue(undefined),
-  createAdapterVersion: vi.fn().mockResolvedValue(null),
-  activateAdapterVersion: vi.fn().mockResolvedValue(null),
 };
 
-// Helper to reset all mocks
-export function resetApiMocks() {
-  Object.values(mockApi).forEach((mock) => {
-    if (typeof mock === 'function' && 'mockClear' in mock) {
-      mock.mockClear();
-    }
+// Export modular APIs
+export const promptsApi = mockPromptsApi;
+export const audioApi = mockAudioApi;
+export const generationApi = mockGenerationApi;
+export const feedbackApi = mockFeedbackApi;
+export const adaptersApi = mockAdaptersApi;
+export const datasetsApi = mockDatasetsApi;
+export const experimentsApi = mockExperimentsApi;
+export const abTestsApi = mockAbTestsApi;
+export const metricsApi = mockMetricsApi;
+
+/** Helper to reset all modular mocks */
+export function resetModularMocks() {
+  const allMocks = [
+    mockPromptsApi,
+    mockAudioApi,
+    mockGenerationApi,
+    mockFeedbackApi,
+    mockAdaptersApi,
+    mockDatasetsApi,
+    mockExperimentsApi,
+    mockAbTestsApi,
+    mockMetricsApi,
+  ];
+  
+  allMocks.forEach(mockModule => {
+    Object.values(mockModule).forEach((mock) => {
+      if (typeof mock === 'function' && 'mockClear' in mock) {
+        mock.mockClear();
+      }
+    });
   });
 }
 
-// Export for use in tests
-export const api = mockApi;
+/** Helper to reset all mocks */
+export const resetApiMocks = resetModularMocks;
