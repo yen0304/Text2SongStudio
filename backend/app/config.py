@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -13,6 +14,14 @@ class Settings(BaseSettings):
         "postgresql+asyncpg://postgres:postgres@localhost:5432/text2song"
     )
     database_url_sync: str = "postgresql://postgres:postgres@localhost:5432/text2song"
+
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def convert_to_async_url(cls, v: str) -> str:
+        """Convert postgresql:// to postgresql+asyncpg:// for async driver."""
+        if v.startswith("postgresql://"):
+            return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return v
 
     # S3/MinIO
     s3_endpoint_url: str = "http://localhost:9000"
