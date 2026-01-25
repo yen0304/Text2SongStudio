@@ -1,19 +1,72 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+
 from app.database import get_db
 from app.models import Dataset
 from app.schemas import (
     DatasetCreate,
-    DatasetResponse,
     DatasetExportRequest,
     DatasetExportResponse,
+    DatasetListResponse,
+    DatasetPreviewRequest,
+    DatasetPreviewResponse,
+    DatasetResponse,
     DatasetStatsResponse,
 )
 from app.services.dataset import DatasetService
 
 router = APIRouter(prefix="/datasets", tags=["datasets"])
+
+
+@router.get("", response_model=DatasetListResponse)
+async def list_datasets(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(Dataset).order_by(Dataset.created_at.desc())
+
+    # Count
+    count_result = await db.execute(select(func.count()).select_from(Dataset))
+    total = count_result.scalar()
+
+    # Paginate
+    offset = (page - 1) * limit
+    query = query.offset(offset).limit(limit)
+
+    result = await db.execute(query)
+    datasets = result.scalars().all()
+
+    return DatasetListResponse(
+        items=[
+            DatasetResponse(
+                id=d.id,
+                name=d.name,
+                description=d.description,
+                type=d.type,
+                filter_query=d.filter_query,
+                sample_count=d.sample_count,
+                export_path=d.export_path,
+                created_at=d.created_at,
+            )
+            for d in datasets
+        ],
+        total=total,
+    )
+
+
+@router.post("/preview", response_model=DatasetPreviewResponse)
+async def preview_dataset(
+    data: DatasetPreviewRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    dataset_service = DatasetService(db)
+    count = await dataset_service.count_samples(data.type, data.filter_query)
+
+    return DatasetPreviewResponse(count=count)
 
 
 @router.post("", response_model=DatasetResponse, status_code=201)
@@ -82,7 +135,7 @@ async def get_dataset(
 async def export_dataset(
     dataset_id: UUID,
     data: DatasetExportRequest,
-    background_tasks: BackgroundTasks,
+    _background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(Dataset).where(Dataset.id == dataset_id))

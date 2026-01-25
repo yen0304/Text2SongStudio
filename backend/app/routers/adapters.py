@@ -1,11 +1,18 @@
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
+
+from app.config import get_settings
 from app.database import get_db
 from app.models import Adapter
-from app.schemas import AdapterCreate, AdapterUpdate, AdapterResponse, AdapterListResponse
-from app.config import get_settings
+from app.schemas import (
+    AdapterCreate,
+    AdapterListResponse,
+    AdapterResponse,
+    AdapterUpdate,
+)
 
 router = APIRouter(prefix="/adapters", tags=["adapters"])
 settings = get_settings()
@@ -71,7 +78,7 @@ async def list_adapters(
     query = select(Adapter)
 
     if active_only:
-        query = query.where(Adapter.is_active == True)
+        query = query.where(Adapter.is_active.is_(True))
     if base_model:
         query = query.where(Adapter.base_model == base_model)
 

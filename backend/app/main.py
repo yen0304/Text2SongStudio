@@ -1,23 +1,30 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.config import get_settings
 from app.database import init_db
 from app.routers import (
-    health_router,
-    prompts_router,
-    generation_router,
-    audio_router,
-    feedback_router,
+    ab_tests_router,
     adapters_router,
+    adapters_v2_router,
+    audio_router,
     datasets_router,
+    experiments_router,
+    feedback_router,
+    generation_router,
+    health_router,
+    jobs_router,
+    metrics_router,
+    prompts_router,
 )
 
 settings = get_settings()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     # Startup
     await init_db()
     yield
@@ -47,4 +54,9 @@ app.include_router(generation_router)
 app.include_router(audio_router)
 app.include_router(feedback_router)
 app.include_router(adapters_router)
+app.include_router(adapters_v2_router, prefix="/api/v2")  # New v2 adapters API
 app.include_router(datasets_router)
+app.include_router(experiments_router)
+app.include_router(ab_tests_router)
+app.include_router(jobs_router)
+app.include_router(metrics_router)

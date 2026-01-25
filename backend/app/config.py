@@ -1,5 +1,6 @@
-from pydantic_settings import BaseSettings
 from functools import lru_cache
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -8,7 +9,9 @@ class Settings(BaseSettings):
     debug: bool = False
 
     # Database
-    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/text2song"
+    database_url: str = (
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/text2song"
+    )
     database_url_sync: str = "postgresql://postgres:postgres@localhost:5432/text2song"
 
     # S3/MinIO

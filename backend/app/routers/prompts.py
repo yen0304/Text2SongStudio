@@ -1,10 +1,12 @@
 from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+
 from app.database import get_db
 from app.models import Prompt
-from app.schemas import PromptCreate, PromptResponse, PromptListResponse
+from app.schemas import PromptCreate, PromptListResponse, PromptResponse
 
 router = APIRouter(prefix="/prompts", tags=["prompts"])
 
@@ -65,10 +67,7 @@ async def list_prompts(
 
     # Get prompts
     result = await db.execute(
-        select(Prompt)
-        .order_by(Prompt.created_at.desc())
-        .offset(offset)
-        .limit(limit)
+        select(Prompt).order_by(Prompt.created_at.desc()).offset(offset).limit(limit)
     )
     prompts = result.scalars().all()
 
