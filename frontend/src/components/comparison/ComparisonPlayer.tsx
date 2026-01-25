@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { api, ABTestPair } from '@/lib/api';
+import { abTestsApi, audioApi, ABTestPair } from '@/lib/api';
 import { Play, Pause, Volume2, ThumbsUp, Equal } from 'lucide-react';
 
 interface ComparisonPlayerProps {
@@ -45,7 +45,7 @@ export function ComparisonPlayer({ pair, testId, onVoted }: ComparisonPlayerProp
   const handleVote = async (preference: 'a' | 'b' | 'equal') => {
     setVoting(true);
     try {
-      await api.submitABTestVote(testId, pair.id, preference);
+      await abTestsApi.submitVote(testId, pair.id, preference);
       onVoted();
     } catch (error) {
       console.error('Failed to submit vote:', error);
@@ -83,13 +83,13 @@ export function ComparisonPlayer({ pair, testId, onVoted }: ComparisonPlayerProp
       {/* Audio Elements */}
       <audio
         ref={audioRefA}
-        src={api.getAudioStreamUrl(pair.audio_a_id)}
+        src={audioApi.getStreamUrl(pair.audio_a_id)}
         onEnded={handleAudioEndA}
         preload="metadata"
       />
       <audio
         ref={audioRefB}
-        src={api.getAudioStreamUrl(pair.audio_b_id)}
+        src={audioApi.getStreamUrl(pair.audio_b_id)}
         onEnded={handleAudioEndB}
         preload="metadata"
       />

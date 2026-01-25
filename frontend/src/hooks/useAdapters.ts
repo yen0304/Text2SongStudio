@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { api, Adapter } from '@/lib/api';
+import { adaptersApi, Adapter } from '@/lib/api';
 
 export function useAdapters(activeOnly = false) {
   const [adapters, setAdapters] = useState<Adapter[]>([]);
@@ -13,7 +13,7 @@ export function useAdapters(activeOnly = false) {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await api.listAdapters({ activeOnly });
+      const response = await adaptersApi.list({ activeOnly });
       setAdapters(response.items);
       setTotal(response.total);
     } catch (err) {

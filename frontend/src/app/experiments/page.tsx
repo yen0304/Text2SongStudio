@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { api, Experiment } from '@/lib/api';
+import { experimentsApi, Experiment } from '@/lib/api';
 import {
   Loader2,
   Plus,
@@ -50,7 +50,7 @@ export default function ExperimentsPage() {
 
   const fetchExperiments = async () => {
     try {
-      const data = await api.listExperiments();
+      const data = await experimentsApi.list();
       setExperiments(data.items);
     } catch (error) {
       console.error('Failed to fetch experiments:', error);
@@ -68,7 +68,7 @@ export default function ExperimentsPage() {
     
     setCreating(true);
     try {
-      await api.createExperiment({
+      await experimentsApi.create({
         name: newName.trim(),
         description: newDescription.trim() || undefined,
       });

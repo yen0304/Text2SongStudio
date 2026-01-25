@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { api, type Feedback, type FeedbackListResponse } from '@/lib/api';
+import { feedbackApi, type Feedback, type FeedbackListResponse } from '@/lib/api';
 import { Star, ThumbsUp, MessageSquare, Loader2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface FeedbackHistoryProps {
@@ -28,7 +28,7 @@ export function FeedbackHistory({ initialJobId }: FeedbackHistoryProps) {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.listFeedback({
+      const response = await feedbackApi.list({
         job_id: jobIdFilter || undefined,
         min_rating: minRating ? parseFloat(minRating) : undefined,
         page,

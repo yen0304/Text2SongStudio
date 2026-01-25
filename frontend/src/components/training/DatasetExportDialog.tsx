@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { api, Dataset, DatasetExport } from '@/lib/api';
+import { datasetsApi, Dataset, DatasetExport } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 
@@ -22,7 +22,7 @@ export function DatasetExportDialog({ dataset, onClose, onSuccess }: DatasetExpo
     setError(null);
 
     try {
-      const result = await api.exportDataset(dataset.id, format);
+      const result = await datasetsApi.export(dataset.id, format);
       setExportResult(result);
       onSuccess();
     } catch (err) {

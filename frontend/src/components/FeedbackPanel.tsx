@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { api } from '@/lib/api';
+import { feedbackApi } from '@/lib/api';
 import { Star, X, ThumbsUp, Check, Tag, MessageSquare } from 'lucide-react';
 
 interface FeedbackPanelProps {
@@ -72,7 +72,7 @@ export function FeedbackPanel({ audioIds, onFeedbackSubmitted }: FeedbackPanelPr
     if (!rating) return;
     setIsSubmitting(true);
     try {
-      await api.submitFeedback({
+      await feedbackApi.submit({
         audio_id: selectedAudioId,
         rating,
         notes: notes || undefined,
@@ -96,7 +96,7 @@ export function FeedbackPanel({ audioIds, onFeedbackSubmitted }: FeedbackPanelPr
     
     setIsSubmitting(true);
     try {
-      await api.submitFeedback({
+      await feedbackApi.submit({
         audio_id: preferredId,
         preferred_over: rejectedId,
         notes: notes || undefined,
@@ -117,7 +117,7 @@ export function FeedbackPanel({ audioIds, onFeedbackSubmitted }: FeedbackPanelPr
     if (tags.length === 0) return;
     setIsSubmitting(true);
     try {
-      await api.submitFeedback({
+      await feedbackApi.submit({
         audio_id: selectedAudioId,
         tags,
         notes: notes || undefined,

@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { api } from '@/lib/api';
+import { generationApi } from '@/lib/api';
 import { ListItemSkeleton, PageHeaderSkeleton } from '@/components/ui/skeleton';
 import { SectionErrorBoundary, ErrorDisplay } from '@/components/ui/error-boundary';
 import {
@@ -16,8 +16,8 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  Play,
   AlertCircle,
+  Trash2,
 } from 'lucide-react';
 
 interface Job {
@@ -76,6 +76,8 @@ function JobsContent() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchJobs = useCallback(async () => {
     try {
@@ -83,7 +85,7 @@ function JobsContent() {
       const params: { status?: string } = {};
       if (statusFilter) params.status = statusFilter;
       
-      const data = await api.listJobs(params);
+      const data = await generationApi.listJobs(params);
       setJobs(data.items);
       setTotal(data.total);
     } catch (err) {
@@ -104,6 +106,30 @@ function JobsContent() {
   const handleRefresh = () => {
     setRefreshing(true);
     fetchJobs();
+  };
+
+  const handleDelete = async (jobId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (deleteConfirm === jobId) {
+      // User confirmed deletion
+      setDeleting(true);
+      try {
+        await generationApi.deleteJob(jobId);
+        setDeleteConfirm(null);
+        fetchJobs();
+      } catch (err) {
+        setError((err as Error).message || 'Failed to delete job');
+      } finally {
+        setDeleting(false);
+      }
+    } else {
+      // Show confirmation
+      setDeleteConfirm(jobId);
+      // Auto-dismiss after 3 seconds
+      setTimeout(() => setDeleteConfirm(null), 3000);
+    }
   };
 
   const filters = [
@@ -228,6 +254,19 @@ function JobsContent() {
                     <div className="text-sm text-muted-foreground w-24 text-right">
                       {formatTime(job.created_at)}
                     </div>
+
+                    <Button
+                      variant={deleteConfirm === job.id ? 'destructive' : 'ghost'}
+                      size="sm"
+                      onClick={(e) => handleDelete(job.id, e)}
+                      disabled={deleting}
+                      className="ml-2"
+                    >
+                      <Trash2 size={14} />
+                      {deleteConfirm === job.id && (
+                        <span className="ml-1">Confirm?</span>
+                      )}
+                    </Button>
                   </Link>
                 );
               })}

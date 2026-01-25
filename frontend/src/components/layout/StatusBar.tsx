@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Activity, MessageSquare } from 'lucide-react';
-import { api } from '@/lib/api';
+import { metricsApi } from '@/lib/api';
 
 interface StatusData {
   activeJobs: number;
@@ -15,7 +15,7 @@ export function StatusBar() {
 
   const fetchStatus = async () => {
     try {
-      const data = await api.getOverviewMetrics();
+      const data = await metricsApi.getOverview();
       setStatus({
         activeJobs: data.pipeline.generation.active,
         pendingFeedback: data.pipeline.feedback.pending,

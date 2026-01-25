@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { api, Dataset, DatasetStats } from '@/lib/api';
+import { datasetsApi, Dataset, DatasetStats } from '@/lib/api';
 import {
   Loader2,
   Plus,
@@ -31,7 +31,7 @@ export default function DatasetsPage() {
 
   const fetchDatasets = async () => {
     try {
-      const data = await api.listDatasets();
+      const data = await datasetsApi.list();
       setDatasets(data.items);
     } catch (error) {
       console.error('Failed to fetch datasets:', error);
@@ -47,7 +47,7 @@ export default function DatasetsPage() {
   const fetchStats = async (datasetId: string) => {
     if (stats[datasetId]) return;
     try {
-      const data = await api.getDatasetStats(datasetId);
+      const data = await datasetsApi.getStats(datasetId);
       setStats(prev => ({ ...prev, [datasetId]: data }));
     } catch (error) {
       console.error('Failed to fetch dataset stats:', error);
@@ -69,7 +69,7 @@ export default function DatasetsPage() {
     
     setCreating(true);
     try {
-      await api.createDataset({
+      await datasetsApi.create({
         name: newDataset.name,
         description: newDataset.description || undefined,
         type: newDataset.type,
@@ -86,7 +86,7 @@ export default function DatasetsPage() {
 
   const handleExport = async (datasetId: string, format: 'jsonl' | 'huggingface') => {
     try {
-      const result = await api.exportDataset(datasetId, format);
+      const result = await datasetsApi.export(datasetId, format);
       // In real app, would trigger download or show path
       console.log('Export result:', result);
     } catch (error) {

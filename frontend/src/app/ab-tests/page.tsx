@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { api, ABTest, Adapter } from '@/lib/api';
+import { abTestsApi, adaptersApi, ABTest, Adapter } from '@/lib/api';
 import {
   Loader2,
   Plus,
@@ -42,8 +42,8 @@ export default function ABTestsPage() {
   const fetchData = async () => {
     try {
       const [testsData, adaptersData] = await Promise.all([
-        api.listABTests(),
-        api.listAdapters(),
+        abTestsApi.list(),
+        adaptersApi.list(),
       ]);
       setTests(testsData.items);
       setAdapters(adaptersData.items);
@@ -64,7 +64,7 @@ export default function ABTestsPage() {
     
     setCreating(true);
     try {
-      const result = await api.createABTest({
+      const result = await abTestsApi.create({
         name: newTest.name,
         description: newTest.description || undefined,
         adapter_a_id: newTest.adapter_a_id || undefined,

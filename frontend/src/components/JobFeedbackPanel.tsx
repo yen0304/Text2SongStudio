@@ -4,8 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { api, type JobFeedbackResponse, type SampleFeedbackGroup } from '@/lib/api';
-import { Star, ThumbsUp, MessageSquare, Loader2, RefreshCw } from 'lucide-react';
+import { generationApi, feedbackApi, type JobFeedbackResponse, type SampleFeedbackGroup } from '@/lib/api';
+import { Star, ThumbsUp, MessageSquare, Loader2, RefreshCw, Trash2 } from 'lucide-react';
 
 interface JobFeedbackPanelProps {
   jobId: string;
@@ -30,7 +30,19 @@ function RatingStars({ rating }: { rating: number | null }) {
   );
 }
 
-function SampleFeedbackCard({ sample, allAudioIds }: { sample: SampleFeedbackGroup; allAudioIds: string[] }) {
+function SampleFeedbackCard({
+  sample,
+  allAudioIds,
+  onDeleteFeedback,
+  deletingId,
+  deleteConfirmId,
+}: {
+  sample: SampleFeedbackGroup;
+  allAudioIds: string[];
+  onDeleteFeedback: (feedbackId: string) => void;
+  deletingId: string | null;
+  deleteConfirmId: string | null;
+}) {
   const getLabelForAudioId = (audioId: string) => {
     const labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
     const index = allAudioIds.indexOf(audioId);
@@ -102,9 +114,26 @@ function SampleFeedbackCard({ sample, allAudioIds }: { sample: SampleFeedbackGro
                 </div>
               )}
 
-              <p className="text-xs text-muted-foreground">
-                {new Date(fb.created_at).toLocaleString()}
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  {new Date(fb.created_at).toLocaleString()}
+                </p>
+                <Button
+                  variant={deleteConfirmId === fb.id ? 'destructive' : 'ghost'}
+                  size="sm"
+                  className={deleteConfirmId === fb.id ? 'h-6 px-2' : 'h-6 w-6 p-0 text-muted-foreground hover:text-destructive'}
+                  onClick={() => onDeleteFeedback(fb.id)}
+                  disabled={deletingId === fb.id}
+                >
+                  {deletingId === fb.id ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : deleteConfirmId === fb.id ? (
+                    <span className="text-xs">Confirm?</span>
+                  ) : (
+                    <Trash2 className="h-3 w-3" />
+                  )}
+                </Button>
+              </div>
             </div>
           ))}
         </div>
@@ -118,6 +147,8 @@ export function JobFeedbackPanel({ jobId, refreshTrigger = 0 }: JobFeedbackPanel
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const fetchFeedback = useCallback(async (showRefreshIndicator = false) => {
     if (showRefreshIndicator) {
@@ -127,7 +158,7 @@ export function JobFeedbackPanel({ jobId, refreshTrigger = 0 }: JobFeedbackPanel
     }
     setError(null);
     try {
-      const response = await api.getJobFeedback(jobId);
+      const response = await generationApi.getJobFeedback(jobId);
       setData(response);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load feedback');
@@ -151,6 +182,26 @@ export function JobFeedbackPanel({ jobId, refreshTrigger = 0 }: JobFeedbackPanel
 
   const handleManualRefresh = () => {
     fetchFeedback(true);
+  };
+
+  const handleDeleteFeedback = async (feedbackId: string) => {
+    if (deleteConfirm === feedbackId) {
+      // User confirmed, delete
+      setDeletingId(feedbackId);
+      try {
+        await feedbackApi.delete(feedbackId);
+        setDeleteConfirm(null);
+        fetchFeedback(true);
+      } catch (e) {
+        console.error('Failed to delete feedback:', e);
+      } finally {
+        setDeletingId(null);
+      }
+    } else {
+      // Show confirmation
+      setDeleteConfirm(feedbackId);
+      setTimeout(() => setDeleteConfirm(null), 3000);
+    }
   };
 
   if (loading) {
@@ -218,6 +269,9 @@ export function JobFeedbackPanel({ jobId, refreshTrigger = 0 }: JobFeedbackPanel
               key={sample.audio_id}
               sample={sample}
               allAudioIds={allAudioIds}
+              onDeleteFeedback={handleDeleteFeedback}
+              deletingId={deletingId}
+              deleteConfirmId={deleteConfirm}
             />
           ))
         )}

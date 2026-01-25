@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { api, Dataset } from '@/lib/api';
+import { datasetsApi, Dataset } from '@/lib/api';
 
 export function useDatasets() {
   const [datasets, setDatasets] = useState<Dataset[]>([]);
@@ -13,7 +13,7 @@ export function useDatasets() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await api.listDatasets();
+      const response = await datasetsApi.list();
       setDatasets(response.items);
       setTotal(response.total);
     } catch (err) {

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { api } from '@/lib/api';
+import { metricsApi } from '@/lib/api';
 import { ArrowRight, Play, MessageSquare, Database, FlaskConical } from 'lucide-react';
 import { PipelineSkeleton, CardSkeleton } from '@/components/ui/skeleton';
 import { SectionErrorBoundary, ErrorDisplay } from '@/components/ui/error-boundary';
@@ -78,7 +78,7 @@ export default function OverviewPage() {
   const fetchData = () => {
     setLoading(true);
     setError(null);
-    api.getOverviewMetrics()
+    metricsApi.getOverview()
       .then(setData)
       .catch((err) => setError(err.message || 'Failed to load metrics'))
       .finally(() => setLoading(false));

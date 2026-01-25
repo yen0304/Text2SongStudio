@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { api, DatasetCreate, FilterQuery } from '@/lib/api';
+import { datasetsApi, DatasetCreate, FilterQuery } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -29,7 +29,7 @@ export function DatasetCreateForm({ onSuccess, onCancel }: DatasetCreateFormProp
       setIsPreviewLoading(true);
       try {
         const filterQuery: FilterQuery = type === 'supervised' ? { min_rating: minRating } : {};
-        const response = await api.previewDatasetCount(type, filterQuery);
+        const response = await datasetsApi.previewCount(type, filterQuery);
         setPreviewCount(response.count);
       } catch (err) {
         setPreviewCount(null);
@@ -59,7 +59,7 @@ export function DatasetCreateForm({ onSuccess, onCancel }: DatasetCreateFormProp
         type,
         filter_query: type === 'supervised' ? { min_rating: minRating } : undefined,
       };
-      await api.createDataset(data);
+      await datasetsApi.create(data);
       onSuccess();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create dataset');

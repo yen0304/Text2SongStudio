@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { api, ExperimentDetail, ExperimentRun } from '@/lib/api';
+import { experimentsApi, ExperimentDetail, ExperimentRun } from '@/lib/api';
 import { RunComparison } from '@/components/comparison/RunComparison';
 import {
   Loader2,
@@ -54,7 +54,7 @@ export default function ExperimentDetailPage() {
 
   const fetchExperiment = async () => {
     try {
-      const data = await api.getExperiment(experimentId);
+      const data = await experimentsApi.get(experimentId);
       setExperiment(data);
     } catch (error) {
       console.error('Failed to fetch experiment:', error);
@@ -70,7 +70,7 @@ export default function ExperimentDetailPage() {
   const handleStartRun = async () => {
     setStartingRun(true);
     try {
-      await api.createExperimentRun(experimentId);
+      await experimentsApi.createRun(experimentId);
       fetchExperiment();
     } catch (error) {
       console.error('Failed to start run:', error);

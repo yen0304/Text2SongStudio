@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { api, type Adapter, type PromptAttributes } from '@/lib/api';
+import { adaptersApi, promptsApi, generationApi, type Adapter, type PromptAttributes } from '@/lib/api';
 
 const STYLE_OPTIONS = [
   { value: '', label: 'Any style' },
@@ -175,7 +175,7 @@ export function PromptEditor({ onPromptCreated, onSamplesGenerated }: PromptEdit
   };
 
   useEffect(() => {
-    api.listAdapters({ activeOnly: true }).then((response) => setAdapters(response.items)).catch(() => {});
+    adaptersApi.list({ activeOnly: true }).then((response) => setAdapters(response.items)).catch(() => {});
   }, []);
 
   const handleGenerate = async () => {
@@ -200,11 +200,11 @@ export function PromptEditor({ onPromptCreated, onSamplesGenerated }: PromptEdit
         attributes.secondary_instruments = secondaryInstruments;
       }
 
-      const prompt = await api.createPrompt({ text, attributes });
+      const prompt = await promptsApi.create({ text, attributes });
       onPromptCreated(prompt.id);
 
       setJobStatus('Submitting generation job...');
-      const job = await api.submitGeneration({
+      const job = await generationApi.submit({
         prompt_id: prompt.id,
         num_samples: numSamples,
         adapter_id: selectedAdapter || undefined,
@@ -225,7 +225,7 @@ export function PromptEditor({ onPromptCreated, onSamplesGenerated }: PromptEdit
     let attempts = 0;
 
     while (attempts < maxAttempts) {
-      const job = await api.getJobStatus(jobId);
+      const job = await generationApi.getStatus(jobId);
 
       if (job.status === 'completed' && job.audio_ids) {
         onSamplesGenerated(job.audio_ids);

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { api, type AudioSample } from '@/lib/api';
+import { audioApi, type AudioSample } from '@/lib/api';
 import { Play, Pause, SkipBack, SkipForward, Check, Volume2 } from 'lucide-react';
 
 interface AudioPlayerProps {
@@ -23,7 +23,7 @@ export function AudioPlayer({ audioIds }: AudioPlayerProps) {
   const wavesurferRef = useRef<any>(null);
 
   useEffect(() => {
-    Promise.all(audioIds.map((id) => api.getAudioMetadata(id)))
+    Promise.all(audioIds.map((id) => audioApi.getMetadata(id)))
       .then(setSamples)
       .catch(console.error);
   }, [audioIds]);
@@ -125,7 +125,7 @@ export function AudioPlayer({ audioIds }: AudioPlayerProps) {
 
       if (audioIds[0]) {
         try {
-          await ws.load(api.getAudioStreamUrl(audioIds[0]));
+          await ws.load(audioApi.getStreamUrl(audioIds[0]));
         } catch (e) {
           // Ignore load errors (including AbortError)
         }
@@ -172,7 +172,7 @@ export function AudioPlayer({ audioIds }: AudioPlayerProps) {
       // Reset time when loading new audio
       setCurrentTime(0);
       setIsPlaying(false);
-      wavesurferRef.current.load(api.getAudioStreamUrl(audioIds[currentIndex]));
+      wavesurferRef.current.load(audioApi.getStreamUrl(audioIds[currentIndex]));
     }
   }, [currentIndex, audioIds]);
 

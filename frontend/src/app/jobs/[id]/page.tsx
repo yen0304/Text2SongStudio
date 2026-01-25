@@ -9,7 +9,7 @@ import { JobFeedbackPanel } from '@/components/JobFeedbackPanel';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { api } from '@/lib/api';
+import { generationApi } from '@/lib/api';
 import {
   Loader2,
   ArrowLeft,
@@ -17,6 +17,7 @@ import {
   XCircle,
   Clock,
   AlertCircle,
+  Trash2,
 } from 'lucide-react';
 
 interface JobDetail {
@@ -59,20 +60,36 @@ export default function JobDetailPage() {
   const [job, setJob] = useState<JobDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [feedbackRefreshTrigger, setFeedbackRefreshTrigger] = useState(0);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const handleFeedbackSubmitted = () => {
     setFeedbackRefreshTrigger((prev) => prev + 1);
   };
 
+  const handleDelete = async () => {
+    if (!deleteConfirm) {
+      setDeleteConfirm(true);
+      setTimeout(() => setDeleteConfirm(false), 3000);
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      await generationApi.deleteJob(jobId);
+      router.push('/jobs');
+    } catch (error) {
+      console.error('Failed to delete job:', error);
+      setDeleting(false);
+      setDeleteConfirm(false);
+    }
+  };
+
   useEffect(() => {
     const fetchJob = async () => {
       try {
-        // Using listJobs with specific ID via filtering
-        const data = await api.listJobs({ limit: 100 });
-        const foundJob = data.items.find((j) => j.id === jobId);
-        if (foundJob) {
-          setJob(foundJob);
-        }
+        const data = await generationApi.getJob(jobId);
+        setJob(data);
       } catch (error) {
         console.error('Failed to fetch job:', error);
       } finally {
@@ -81,14 +98,14 @@ export default function JobDetailPage() {
     };
 
     fetchJob();
-    
+
     // Poll for updates if job is still processing
     const interval = setInterval(() => {
       if (job?.status === 'processing' || job?.status === 'queued') {
         fetchJob();
       }
     }, 3000);
-    
+
     return () => clearInterval(interval);
   }, [jobId, job?.status]);
 
@@ -122,10 +139,21 @@ export default function JobDetailPage() {
           { label: `#${job.id.slice(0, 8)}` },
         ]}
         actions={
-          <Button variant="outline" size="sm" onClick={() => router.push('/jobs')}>
-            <ArrowLeft size={16} />
-            <span className="ml-2">Back</span>
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => router.push('/jobs')}>
+              <ArrowLeft size={16} />
+              <span className="ml-2">Back</span>
+            </Button>
+            <Button
+              variant={deleteConfirm ? 'destructive' : 'outline'}
+              size="sm"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              <Trash2 size={16} />
+              <span className="ml-2">{deleteConfirm ? 'Click to confirm' : 'Delete'}</span>
+            </Button>
+          </div>
         }
       />
 

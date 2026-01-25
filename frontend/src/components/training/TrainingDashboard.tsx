@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useDatasets } from '@/hooks/useDatasets';
 import { useAdapters } from '@/hooks/useAdapters';
 import { useFeedbackStats } from '@/hooks/useFeedbackStats';
-import { api, Dataset, Adapter } from '@/lib/api';
+import { adaptersApi, Dataset, Adapter } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { DatasetList } from './DatasetList';
 import { DatasetCreateForm } from './DatasetCreateForm';
@@ -28,7 +28,7 @@ export function TrainingDashboard() {
 
   const handleToggleAdapter = async (adapter: Adapter) => {
     try {
-      await api.updateAdapter(adapter.id, { is_active: !adapter.is_active });
+      await adaptersApi.update(adapter.id, { is_active: !adapter.is_active });
       refreshAdapters();
       if (selectedAdapter?.id === adapter.id) {
         setSelectedAdapter(null);

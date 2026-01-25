@@ -7,7 +7,7 @@ import { ComparisonPlayer } from '@/components/comparison';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { api, ABTestDetail, ABTestResults, Prompt } from '@/lib/api';
+import { abTestsApi, promptsApi, ABTestDetail, ABTestResults, Prompt } from '@/lib/api';
 import {
   Loader2,
   ArrowLeft,
@@ -35,9 +35,9 @@ export default function ABTestDetailPage() {
   const fetchData = async () => {
     try {
       const [testData, resultsData, promptsData] = await Promise.all([
-        api.getABTest(testId),
-        api.getABTestResults(testId),
-        api.listPrompts(1, 50),
+        abTestsApi.get(testId),
+        abTestsApi.getResults(testId),
+        promptsApi.list(1, 50),
       ]);
       setTest(testData);
       setResults(resultsData);
@@ -64,7 +64,7 @@ export default function ABTestDetailPage() {
     
     setGenerating(true);
     try {
-      await api.generateABTestSamples(testId, { prompt_ids: selectedPrompts });
+      await abTestsApi.generateSamples(testId, { prompt_ids: selectedPrompts });
       setShowPromptSelector(false);
       setSelectedPrompts([]);
       fetchData();

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { api, FeedbackStats } from '@/lib/api';
+import { feedbackApi, FeedbackStats } from '@/lib/api';
 
 export function useFeedbackStats() {
   const [stats, setStats] = useState<FeedbackStats | null>(null);
@@ -12,7 +12,7 @@ export function useFeedbackStats() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await api.getFeedbackStats();
+      const response = await feedbackApi.getStats();
       setStats(response);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch feedback stats'));
