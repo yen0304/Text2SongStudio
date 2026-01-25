@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Backend Testing Infrastructure** (2025-01-25)
+  - Comprehensive test suite with 243 tests achieving 60.94% coverage (target: 50%)
+  - Schema tests for all Pydantic models (prompt, feedback, adapter, dataset, experiment, generation)
+  - Router tests for API endpoints with mocked database
+  - Service tests for storage and dataset services with mocked dependencies
+  - Config tests for Settings validation and URL conversion
+  - Mock fixtures for database, storage, and model instances in conftest.py
+  - pytest-cov configuration in pyproject.toml with 50% coverage threshold
+  - Excludes LLM/HuggingFace related code (generation.py) from coverage requirements
 - Initial project structure
 - FastAPI backend with audio generation endpoints
 - Next.js frontend with prompt editor and audio player
