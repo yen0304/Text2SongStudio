@@ -55,6 +55,7 @@ jobs:
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           files: backend/coverage.xml
           flags: backend
 
@@ -86,6 +87,13 @@ jobs:
       - name: Run tests
         working-directory: frontend
         run: npm run test -- --coverage || true
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: frontend/coverage/lcov.info
+          flags: frontend
 
       - name: Build
         working-directory: frontend
