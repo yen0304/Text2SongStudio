@@ -6,6 +6,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { datasetsApi, Dataset, DatasetStats } from '@/lib/api';
 import {
   Loader2,
@@ -14,6 +26,7 @@ import {
   Download,
   FileJson,
   BarChart,
+  Trash2,
 } from 'lucide-react';
 
 export default function DatasetsPage() {
@@ -28,10 +41,14 @@ export default function DatasetsPage() {
   });
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [stats, setStats] = useState<Record<string, DatasetStats>>({});
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Dataset | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const fetchDatasets = async () => {
     try {
-      const data = await datasetsApi.list();
+      const data = await datasetsApi.list({ include_deleted: showDeleted });
       setDatasets(data.items);
     } catch (error) {
       console.error('Failed to fetch datasets:', error);
@@ -42,7 +59,7 @@ export default function DatasetsPage() {
 
   useEffect(() => {
     fetchDatasets();
-  }, []);
+  }, [showDeleted]);
 
   const fetchStats = async (datasetId: string) => {
     if (stats[datasetId]) return;
@@ -94,6 +111,33 @@ export default function DatasetsPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await datasetsApi.delete(deleteTarget.id);
+      setDeleteTarget(null);
+      fetchDatasets();
+    } catch (error: unknown) {
+      // Check if it's a 400 error with reference blocking message
+      if (error && typeof error === 'object' && 'message' in error) {
+        const errMsg = (error as { message: string }).message;
+        if (errMsg.includes('referenced by')) {
+          setDeleteError(errMsg);
+        } else {
+          setDeleteError('Failed to delete dataset. Please try again.');
+        }
+      } else {
+        setDeleteError('Failed to delete dataset. Please try again.');
+      }
+      console.error('Failed to delete dataset:', error);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -109,10 +153,22 @@ export default function DatasetsPage() {
         description="Manage training and preference datasets"
         breadcrumb={[{ label: 'Datasets' }]}
         actions={
-          <Button onClick={() => setShowCreateForm(!showCreateForm)}>
-            <Plus size={16} />
-            <span className="ml-2">New Dataset</span>
-          </Button>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="show-deleted"
+                checked={showDeleted}
+                onCheckedChange={setShowDeleted}
+              />
+              <Label htmlFor="show-deleted" className="text-sm">
+                Show deleted
+              </Label>
+            </div>
+            <Button onClick={() => setShowCreateForm(!showCreateForm)}>
+              <Plus size={16} />
+              <span className="ml-2">New Dataset</span>
+            </Button>
+          </div>
         }
       />
 
@@ -201,6 +257,11 @@ export default function DatasetsPage() {
                           <Badge variant="outline" className="text-xs">
                             {dataset.type}
                           </Badge>
+                          {dataset.deleted_at && (
+                            <Badge variant="secondary" className="bg-red-500/10 text-red-600 text-xs">
+                              Deleted
+                            </Badge>
+                          )}
                           {dataset.is_exported && (
                             <Badge variant="secondary" className="bg-green-500/10 text-green-600 text-xs">
                               Exported
@@ -226,6 +287,20 @@ export default function DatasetsPage() {
                         >
                           <Download size={16} />
                         </Button>
+                        {!dataset.deleted_at && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteError(null);
+                              setDeleteTarget(dataset);
+                            }}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -315,6 +390,38 @@ export default function DatasetsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Dataset</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{deleteTarget?.name}&quot;? This action will
+              soft-delete the dataset. It can be viewed again by enabling &quot;Show deleted&quot;.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError && (
+            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              {deleteError}
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting && <Loader2 size={16} className="animate-spin mr-2" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

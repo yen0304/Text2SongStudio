@@ -4,7 +4,7 @@
  * Handles all dataset-related API operations
  */
 
-import { fetchApi } from '../client';
+import { fetchApi, buildQueryString } from '../client';
 import type { 
   Dataset, 
   DatasetCreate, 
@@ -14,12 +14,24 @@ import type {
 } from '../types/datasets';
 import type { PaginatedResponse } from '../types/common';
 
+export interface ListDatasetsParams {
+  page?: number;
+  limit?: number;
+  include_deleted?: boolean;
+}
+
 export const datasetsApi = {
   /**
    * List all datasets with pagination
    */
-  list: (page = 1, limit = 20) =>
-    fetchApi<PaginatedResponse<Dataset>>(`/datasets?page=${page}&limit=${limit}`),
+  list: (params?: ListDatasetsParams) => {
+    const query = buildQueryString({
+      page: params?.page ?? 1,
+      limit: params?.limit ?? 20,
+      include_deleted: params?.include_deleted,
+    });
+    return fetchApi<PaginatedResponse<Dataset>>(`/datasets${query}`);
+  },
 
   /**
    * Get a specific dataset
@@ -35,6 +47,12 @@ export const datasetsApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  /**
+   * Delete a dataset (soft delete)
+   */
+  delete: (id: string) =>
+    fetchApi<void>(`/datasets/${id}`, { method: 'DELETE' }),
 
   /**
    * Export a dataset

@@ -12,6 +12,7 @@ export interface Dataset {
   export_path: string | null;
   is_exported: boolean;
   created_at: string;
+  deleted_at: string | null;
 }
 
 export interface FilterQuery {
