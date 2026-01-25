@@ -24,8 +24,23 @@ for mod_name in mock_modules:
     sys.modules[mod_name] = MagicMock()
 
 
+# Store patchers at module level so they persist across tests
+_init_db_patcher = None
+_app_instance = None
+
+
+@pytest.fixture(scope="session", autouse=True)
+def mock_init_db():
+    """Mock init_db at session level to avoid actual DB connections."""
+    global _init_db_patcher
+    _init_db_patcher = patch("app.main.init_db", new_callable=AsyncMock)
+    _init_db_patcher.start()
+    yield
+    _init_db_patcher.stop()
+
+
 @pytest.fixture
-def client():
+def client(mock_init_db):  # noqa: ARG001
     """Create a test client for the FastAPI app."""
     from app.main import app
 
