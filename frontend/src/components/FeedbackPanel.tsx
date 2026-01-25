@@ -7,18 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api';
-import { Star, X } from 'lucide-react';
+import { Star, X, ThumbsUp, Check, Tag, MessageSquare } from 'lucide-react';
 
 interface FeedbackPanelProps {
   audioIds: string[];
+  onFeedbackSubmitted?: () => void;
 }
-
-const RATING_CRITERIA = [
-  { key: 'overall', label: 'Overall Quality' },
-  { key: 'musicality', label: 'Musicality' },
-  { key: 'coherence', label: 'Coherence' },
-  { key: 'emotional', label: 'Emotional Alignment' },
-];
 
 const SUGGESTED_TAGS = [
   'good_melody',
@@ -35,20 +29,26 @@ const SUGGESTED_TAGS = [
 
 const SAMPLE_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
-export function FeedbackPanel({ audioIds }: FeedbackPanelProps) {
-  const [activeTab, setActiveTab] = useState<'rating' | 'preference' | 'tags'>('rating');
+export function FeedbackPanel({ audioIds, onFeedbackSubmitted }: FeedbackPanelProps) {
+  // Selected sample for rating/tags
   const [selectedAudioId, setSelectedAudioId] = useState<string>(audioIds[0] || '');
-  const [ratings, setRatings] = useState<Record<string, number>>({});
+  
+  // Rating state
+  const [rating, setRating] = useState<number | null>(null);
+  
+  // Preference state (for A/B comparison)
   const [preferredId, setPreferredId] = useState<string | null>(null);
+  
+  // Tags state
   const [tags, setTags] = useState<string[]>([]);
   const [customTag, setCustomTag] = useState('');
+  
+  // Notes
   const [notes, setNotes] = useState('');
+  
+  // UI state
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-
-  const handleRatingClick = (criterion: string, value: number) => {
-    setRatings((prev) => ({ ...prev, [criterion]: value }));
-  };
+  const [lastSubmitted, setLastSubmitted] = useState<string | null>(null);
 
   const handleAddTag = (tag: string) => {
     if (!tags.includes(tag)) {
@@ -68,58 +68,84 @@ export function FeedbackPanel({ audioIds }: FeedbackPanelProps) {
     }
   };
 
-  const handleSubmitFeedback = async () => {
+  const handleSubmitRating = async () => {
+    if (!rating) return;
     setIsSubmitting(true);
-
     try {
-      if (activeTab === 'rating' && ratings.overall) {
-        await api.submitFeedback({
-          audio_id: selectedAudioId,
-          rating: ratings.overall,
-          tags: tags.length > 0 ? tags : undefined,
-          notes: notes || undefined,
-        });
-      } else if (activeTab === 'preference' && preferredId) {
-        const rejectedId = audioIds.find((id) => id !== preferredId);
-        if (rejectedId) {
-          await api.submitFeedback({
-            audio_id: preferredId,
-            preferred_over: rejectedId,
-            tags: tags.length > 0 ? tags : undefined,
-            notes: notes || undefined,
-          });
-        }
-      } else if (activeTab === 'tags' && tags.length > 0) {
-        await api.submitFeedback({
-          audio_id: selectedAudioId,
-          tags,
-          notes: notes || undefined,
-        });
-      }
-
-      setSubmitted(true);
-      setTimeout(() => setSubmitted(false), 3000);
+      await api.submitFeedback({
+        audio_id: selectedAudioId,
+        rating,
+        notes: notes || undefined,
+      });
+      setLastSubmitted('rating');
+      setRating(null);
+      setNotes('');
+      setTimeout(() => setLastSubmitted(null), 2000);
+      onFeedbackSubmitted?.();
     } catch (error) {
-      console.error('Failed to submit feedback:', error);
+      console.error('Failed to submit rating:', error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const renderStars = (criterion: string) => {
-    const currentRating = ratings[criterion] || 0;
+  const handleSubmitPreference = async () => {
+    if (!preferredId) return;
+    const rejectedId = audioIds.find((id) => id !== preferredId);
+    if (!rejectedId) return;
+    
+    setIsSubmitting(true);
+    try {
+      await api.submitFeedback({
+        audio_id: preferredId,
+        preferred_over: rejectedId,
+        notes: notes || undefined,
+      });
+      setLastSubmitted('preference');
+      setPreferredId(null);
+      setNotes('');
+      setTimeout(() => setLastSubmitted(null), 2000);
+      onFeedbackSubmitted?.();
+    } catch (error) {
+      console.error('Failed to submit preference:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
+  const handleSubmitTags = async () => {
+    if (tags.length === 0) return;
+    setIsSubmitting(true);
+    try {
+      await api.submitFeedback({
+        audio_id: selectedAudioId,
+        tags,
+        notes: notes || undefined,
+      });
+      setLastSubmitted('tags');
+      setTags([]);
+      setNotes('');
+      setTimeout(() => setLastSubmitted(null), 2000);
+      onFeedbackSubmitted?.();
+    } catch (error) {
+      console.error('Failed to submit tags:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const renderStars = () => {
     return (
       <div className="flex gap-1">
         {[1, 2, 3, 4, 5].map((value) => (
           <button
             key={value}
-            onClick={() => handleRatingClick(criterion, value)}
+            onClick={() => setRating(value)}
             className="p-1 hover:scale-110 transition-transform"
           >
             <Star
-              className={`h-6 w-6 ${
-                value <= currentRating ? 'fill-primary text-primary' : 'text-muted-foreground'
+              className={`h-7 w-7 ${
+                rating && value <= rating ? 'fill-primary text-primary' : 'text-muted-foreground'
               }`}
             />
           </button>
@@ -128,187 +154,237 @@ export function FeedbackPanel({ audioIds }: FeedbackPanelProps) {
     );
   };
 
+  const selectedIndex = audioIds.indexOf(selectedAudioId);
+  const selectedLabel = selectedIndex >= 0 ? SAMPLE_LABELS[selectedIndex] : '?';
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Provide Feedback</CardTitle>
-        <div className="flex gap-2">
-          {(['rating', 'preference', 'tags'] as const).map((tab) => (
-            <Button
-              key={tab}
-              variant={activeTab === tab ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setActiveTab(tab)}
-            >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </Button>
-          ))}
-        </div>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2">
+          <MessageSquare className="h-5 w-5" />
+          Provide Feedback
+        </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Each feedback type is submitted independently
+        </p>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {activeTab === 'rating' && (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Select Sample</label>
-              <div className="flex gap-1 p-1 bg-muted rounded-lg">
-                {audioIds.map((id, index) => (
-                  <button
-                    key={id}
-                    onClick={() => setSelectedAudioId(id)}
-                    className={`
-                      flex-1 px-3 py-2 rounded-md text-sm font-medium transition-all
-                      ${selectedAudioId === id
-                        ? 'bg-background shadow-sm text-foreground'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
-                      }
-                    `}
-                  >
-                    Sample {SAMPLE_LABELS[index]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {RATING_CRITERIA.map((criterion) => (
-              <div key={criterion.key} className="flex items-center justify-between">
-                <span className="text-sm">{criterion.label}</span>
-                {renderStars(criterion.key)}
-              </div>
-            ))}
+      <CardContent className="space-y-6">
+        
+        {/* Section 1: Rating */}
+        <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium flex items-center gap-2">
+              <Star className="h-4 w-4" />
+              Rating
+            </h3>
+            {lastSubmitted === 'rating' && (
+              <Badge variant="default" className="bg-green-600">
+                <Check className="h-3 w-3 mr-1" /> Submitted
+              </Badge>
+            )}
           </div>
-        )}
+          
+          {/* Sample selector for rating */}
+          {audioIds.length > 1 && (
+            <div className="flex gap-1 p-1 bg-muted rounded-lg">
+              {audioIds.map((id, index) => (
+                <button
+                  key={id}
+                  onClick={() => setSelectedAudioId(id)}
+                  className={`
+                    flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-all
+                    ${selectedAudioId === id
+                      ? 'bg-background shadow-sm text-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                    }
+                  `}
+                >
+                  {SAMPLE_LABELS[index]}
+                </button>
+              ))}
+            </div>
+          )}
+          
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">
+              Rate Sample {selectedLabel}
+            </span>
+            {renderStars()}
+          </div>
+          
+          <Button
+            onClick={handleSubmitRating}
+            disabled={!rating || isSubmitting}
+            size="sm"
+            className="w-full"
+          >
+            Submit Rating {rating ? `(${rating} stars)` : ''}
+          </Button>
+        </div>
 
-        {activeTab === 'preference' && audioIds.length >= 2 && (
-          <div className="space-y-4">
+        {/* Section 2: A/B Preference */}
+        {audioIds.length >= 2 && (
+          <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium flex items-center gap-2">
+                <ThumbsUp className="h-4 w-4" />
+                Preference
+              </h3>
+              {lastSubmitted === 'preference' && (
+                <Badge variant="default" className="bg-green-600">
+                  <Check className="h-3 w-3 mr-1" /> Submitted
+                </Badge>
+              )}
+            </div>
+            
             <p className="text-sm text-muted-foreground">
-              Which sample do you prefer?
+              Compare Sample A and B, select your preferred one
             </p>
-            <div className="grid grid-cols-2 gap-3">
+            
+            <div className="grid grid-cols-2 gap-2">
               {audioIds.slice(0, 2).map((id, index) => (
                 <button
                   key={id}
-                  onClick={() => setPreferredId(id)}
+                  onClick={() => setPreferredId(preferredId === id ? null : id)}
                   className={`
-                    p-4 rounded-lg border-2 text-center transition-all
+                    p-3 rounded-lg border-2 text-center transition-all
                     ${preferredId === id
                       ? 'border-primary bg-primary/10 text-foreground'
                       : 'border-border hover:border-primary/50 text-muted-foreground hover:text-foreground'
                     }
                   `}
                 >
-                  <span className="text-2xl font-bold block mb-1">
+                  <span className="text-xl font-bold block">
                     {SAMPLE_LABELS[index]}
                   </span>
-                  <span className="text-sm">
-                    {preferredId === id ? 'Preferred' : 'Sample ' + SAMPLE_LABELS[index]}
+                  <span className="text-xs">
+                    {preferredId === id ? '✓ Selected' : 'Click to select'}
                   </span>
                 </button>
               ))}
             </div>
-            <button
-              onClick={() => setPreferredId(null)}
-              className={`
-                w-full p-2 rounded-md text-sm transition-all
-                ${preferredId === null
-                  ? 'bg-muted text-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                }
-              `}
+            
+            <Button
+              onClick={handleSubmitPreference}
+              disabled={!preferredId || isSubmitting}
+              size="sm"
+              className="w-full"
             >
-              No preference (tie)
-            </button>
+              Submit Preference {preferredId ? `(${SAMPLE_LABELS[audioIds.indexOf(preferredId)]})` : ''}
+            </Button>
           </div>
         )}
 
-        {activeTab === 'tags' && (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Select Sample</label>
-              <div className="flex gap-1 p-1 bg-muted rounded-lg">
-                {audioIds.map((id, index) => (
-                  <button
-                    key={id}
-                    onClick={() => setSelectedAudioId(id)}
-                    className={`
-                      flex-1 px-3 py-2 rounded-md text-sm font-medium transition-all
-                      ${selectedAudioId === id
-                        ? 'bg-background shadow-sm text-foreground'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
-                      }
-                    `}
-                  >
-                    Sample {SAMPLE_LABELS[index]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Suggested Tags</label>
-              <div className="flex flex-wrap gap-2">
-                {SUGGESTED_TAGS.map((tag) => (
-                  <Badge
-                    key={tag}
-                    variant={tags.includes(tag) ? 'default' : 'outline'}
-                    className="cursor-pointer"
-                    onClick={() =>
-                      tags.includes(tag) ? handleRemoveTag(tag) : handleAddTag(tag)
-                    }
-                  >
-                    {tag.replace(/_/g, ' ')}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <Input
-                placeholder="Add custom tag..."
-                value={customTag}
-                onChange={(e) => setCustomTag(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddCustomTag()}
-              />
-              <Button variant="outline" onClick={handleAddCustomTag}>
-                Add
-              </Button>
-            </div>
-
-            {tags.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium mb-2">Selected Tags</label>
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="gap-1">
-                      {tag.replace(/_/g, ' ')}
-                      <X
-                        className="h-3 w-3 cursor-pointer"
-                        onClick={() => handleRemoveTag(tag)}
-                      />
-                    </Badge>
-                  ))}
-                </div>
-              </div>
+        {/* Section 3: Tags */}
+        <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium flex items-center gap-2">
+              <Tag className="h-4 w-4" />
+              Tags
+            </h3>
+            {lastSubmitted === 'tags' && (
+              <Badge variant="default" className="bg-green-600">
+                <Check className="h-3 w-3 mr-1" /> Submitted
+              </Badge>
             )}
           </div>
-        )}
+          
+          {/* Sample selector for tags */}
+          {audioIds.length > 1 && (
+            <div className="flex gap-1 p-1 bg-muted rounded-lg">
+              {audioIds.map((id, index) => (
+                <button
+                  key={id}
+                  onClick={() => setSelectedAudioId(id)}
+                  className={`
+                    flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-all
+                    ${selectedAudioId === id
+                      ? 'bg-background shadow-sm text-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                    }
+                  `}
+                >
+                  {SAMPLE_LABELS[index]}
+                </button>
+              ))}
+            </div>
+          )}
+          
+          <div className="flex flex-wrap gap-1.5">
+            {SUGGESTED_TAGS.map((tag) => (
+              <Badge
+                key={tag}
+                variant={tags.includes(tag) ? 'default' : 'outline'}
+                className="cursor-pointer text-xs"
+                onClick={() =>
+                  tags.includes(tag) ? handleRemoveTag(tag) : handleAddTag(tag)
+                }
+              >
+                {tag.replace(/_/g, ' ')}
+              </Badge>
+            ))}
+          </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-2">Notes (optional)</label>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Custom tag..."
+              value={customTag}
+              onChange={(e) => setCustomTag(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddCustomTag()}
+              className="h-8 text-sm"
+            />
+            <Button variant="outline" size="sm" onClick={handleAddCustomTag}>
+              Add
+            </Button>
+          </div>
+
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {tags.map((tag) => (
+                <Badge key={tag} variant="secondary" className="gap-1 text-xs">
+                  {tag.replace(/_/g, ' ')}
+                  <X
+                    className="h-3 w-3 cursor-pointer"
+                    onClick={() => handleRemoveTag(tag)}
+                  />
+                </Badge>
+              ))}
+            </div>
+          )}
+          
+          <Button
+            onClick={handleSubmitTags}
+            disabled={tags.length === 0 || isSubmitting}
+            size="sm"
+            className="w-full"
+          >
+            Submit Tags {tags.length > 0 ? `(${tags.length})` : ''}
+          </Button>
+        </div>
+
+        {/* Optional Notes Section */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted-foreground">
+            Notes (included with next submission)
+          </label>
           <Textarea
-            placeholder="Add any additional notes about this sample..."
+            placeholder="Add notes..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
+            className="text-sm"
           />
         </div>
 
-        <Button
-          onClick={handleSubmitFeedback}
-          disabled={isSubmitting}
-          className="w-full"
-        >
-          {isSubmitting ? 'Submitting...' : submitted ? 'Feedback Submitted!' : 'Submit Feedback'}
-        </Button>
+        {/* Training Progress Link */}
+        <div className="pt-2 border-t text-center">
+          <p className="text-xs text-muted-foreground">
+            Your feedback helps improve the model.{' '}
+            <a href="/training" className="text-primary hover:underline">
+              View training progress →
+            </a>
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

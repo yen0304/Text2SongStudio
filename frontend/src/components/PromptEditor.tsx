@@ -175,7 +175,7 @@ export function PromptEditor({ onPromptCreated, onSamplesGenerated }: PromptEdit
   };
 
   useEffect(() => {
-    api.listAdapters().then(setAdapters).catch(() => {});
+    api.listAdapters(true).then((response) => setAdapters(response.items)).catch(() => {});
   }, []);
 
   const handleGenerate = async () => {
