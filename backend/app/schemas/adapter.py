@@ -25,6 +25,7 @@ class AdapterUpdate(BaseModel):
 
 class AdapterRead(BaseModel):
     """Unified adapter response schema."""
+
     id: UUID
     name: str
     description: str | None = None
