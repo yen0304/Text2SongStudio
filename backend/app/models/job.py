@@ -1,8 +1,11 @@
 import uuid
 from datetime import datetime
 from enum import Enum
-from sqlalchemy import Column, String, Float, DateTime, Text, JSON, Integer, Enum as SQLEnum
-from sqlalchemy.dialects.postgresql import UUID, ARRAY
+
+from sqlalchemy import JSON, Column, DateTime, Float, Integer, Text
+from sqlalchemy import Enum as SQLEnum
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
+
 from app.database import Base
 
 
@@ -28,7 +31,3 @@ class GenerationJob(Base):
     generation_params = Column(JSON, nullable=True, default=dict)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     completed_at = Column(DateTime, nullable=True)
-
-
-# Import Integer for num_samples
-from sqlalchemy import Integer

@@ -1,8 +1,10 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, JSON, Text
+
+from sqlalchemy import JSON, Column, DateTime, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
+
 from app.database import Base
 
 
@@ -16,4 +18,6 @@ class Prompt(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships
-    audio_samples = relationship("AudioSample", back_populates="prompt", lazy="selectin")
+    audio_samples = relationship(
+        "AudioSample", back_populates="prompt", lazy="selectin"
+    )

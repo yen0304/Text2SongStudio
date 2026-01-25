@@ -1,9 +1,12 @@
 import uuid
 from datetime import datetime
 from enum import Enum
-from sqlalchemy import Column, String, Integer, DateTime, Text, JSON, Enum as SQLEnum
+
+from sqlalchemy import JSON, Column, DateTime, Integer, String, Text
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
+
 from app.database import Base
 
 
@@ -25,4 +28,7 @@ class Dataset(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships
-    trained_adapters = relationship("Adapter", back_populates="training_dataset", lazy="selectin")
+    trained_adapters = relationship(
+        "Adapter", back_populates="training_dataset", lazy="selectin"
+    )
+    experiments = relationship("Experiment", back_populates="dataset", lazy="selectin")
