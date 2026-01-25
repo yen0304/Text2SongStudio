@@ -33,6 +33,29 @@ export function AudioPlayer({ audioIds }: AudioPlayerProps) {
 
     let ws: any = null;
     let destroyed = false;
+    let isReady = false;
+    let progressInterval: ReturnType<typeof setInterval> | null = null;
+
+    // Use setInterval for reliable progress updates
+    const startProgressUpdates = () => {
+      if (progressInterval) return;
+      progressInterval = setInterval(() => {
+        if (destroyed || !ws) return;
+        try {
+          const current = ws.getCurrentTime();
+          setCurrentTime(current);
+        } catch (e) {
+          // Ignore errors when getting current time
+        }
+      }, 50); // Update every 50ms for smooth progress
+    };
+
+    const stopProgressUpdates = () => {
+      if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+      }
+    };
 
     const initWaveSurfer = async () => {
       const WaveSurfer = (await import('wavesurfer.js')).default;
@@ -52,50 +75,103 @@ export function AudioPlayer({ audioIds }: AudioPlayerProps) {
       });
 
       ws.on('ready', () => {
-        if (!destroyed) setDuration(ws.getDuration());
+        isReady = true;
+        if (!destroyed) {
+          setDuration(ws.getDuration());
+          setCurrentTime(0);
+        }
       });
 
-      ws.on('audioprocess', () => {
-        if (!destroyed) setCurrentTime(ws.getCurrentTime());
+      // Update on seeking/interaction
+      ws.on('seeking', (currentTime: number) => {
+        if (!destroyed) setCurrentTime(currentTime);
+      });
+
+      ws.on('interaction', (newTime: number) => {
+        if (!destroyed) setCurrentTime(newTime);
       });
 
       ws.on('play', () => {
-        if (!destroyed) setIsPlaying(true);
+        if (!destroyed) {
+          setIsPlaying(true);
+          startProgressUpdates();
+        }
       });
       ws.on('pause', () => {
-        if (!destroyed) setIsPlaying(false);
+        if (!destroyed) {
+          setIsPlaying(false);
+          stopProgressUpdates();
+          // Update one final time to get accurate position
+          try {
+            setCurrentTime(ws.getCurrentTime());
+          } catch (e) {}
+        }
       });
       ws.on('finish', () => {
         if (!destroyed) {
           setIsPlaying(false);
+          stopProgressUpdates();
+          setCurrentTime(0);
           setCurrentIndex((prev) => (prev < audioIds.length - 1 ? prev + 1 : prev));
         }
+      });
+      
+      // Handle internal errors from WaveSurfer (including AbortError)
+      ws.on('error', () => {
+        // Silently ignore - these are often AbortErrors during cleanup
       });
 
       wavesurferRef.current = ws;
 
       if (audioIds[0]) {
-        ws.load(api.getAudioStreamUrl(audioIds[0]));
+        try {
+          await ws.load(api.getAudioStreamUrl(audioIds[0]));
+        } catch (e) {
+          // Ignore load errors (including AbortError)
+        }
       }
     };
 
-    initWaveSurfer();
+    initWaveSurfer().catch(() => {
+      // Ignore initialization errors
+    });
 
     return () => {
       destroyed = true;
+      wavesurferRef.current = null;
+      
+      // Stop progress updates
+      stopProgressUpdates();
+      
       if (ws) {
+        // Unsubscribe all events first to prevent callbacks during cleanup
         try {
-          ws.destroy();
+          ws.unAll();
         } catch (e) {
           // Ignore
         }
+        
+        // Only destroy if the instance was fully initialized
+        // This prevents AbortError when component unmounts before audio loads
+        if (isReady) {
+          try {
+            ws.pause();
+            ws.destroy();
+          } catch (e) {
+            // Ignore cleanup errors
+          }
+        }
+        // If not ready, the load is still in progress - just let it fail silently
+        // The unAll() call above will prevent any callbacks
       }
-      wavesurferRef.current = null;
     };
   }, [audioIds]);
 
   useEffect(() => {
     if (wavesurferRef.current && audioIds[currentIndex]) {
+      // Reset time when loading new audio
+      setCurrentTime(0);
+      setIsPlaying(false);
       wavesurferRef.current.load(api.getAudioStreamUrl(audioIds[currentIndex]));
     }
   }, [currentIndex, audioIds]);
@@ -103,7 +179,7 @@ export function AudioPlayer({ audioIds }: AudioPlayerProps) {
   const togglePlayPause = () => {
     if (wavesurferRef.current) {
       wavesurferRef.current.playPause();
-      setPlayedSamples((prev) => new Set([...prev, currentIndex]));
+      setPlayedSamples((prev) => new Set(Array.from(prev).concat([currentIndex])));
     }
   };
 
