@@ -5,7 +5,6 @@
 # Text2Song Studio
 
 [![CI](https://github.com/yen0304/Text2SongStudio/actions/workflows/ci.yml/badge.svg)](https://github.com/yen0304/Text2SongStudio/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/yen0304/Text2SongStudio/graph/badge.svg)](https://codecov.io/gh/yen0304/Text2SongStudio)
 [![Backend Coverage](https://codecov.io/gh/yen0304/Text2SongStudio/graph/badge.svg?flag=backend)](https://codecov.io/gh/yen0304/Text2SongStudio?flags[0]=backend)
 [![Frontend Coverage](https://codecov.io/gh/yen0304/Text2SongStudio/graph/badge.svg?flag=frontend)](https://codecov.io/gh/yen0304/Text2SongStudio?flags[0]=frontend)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
