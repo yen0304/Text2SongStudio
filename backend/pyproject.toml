@@ -92,15 +92,11 @@ filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::RuntimeWarning",
 ]
-# Temporarily exclude router tests that need FastAPI dependency_overrides refactoring
-# TODO: Refactor router tests to use app.dependency_overrides instead of patching
-norecursedirs = ["tests/routers"]
 
 [tool.coverage.run]
 source = ["app"]
 omit = [
     "app/services/generation.py",  # Exclude LLM/HuggingFace related code
-    "app/routers/*",  # Temporarily exclude routers until tests are refactored
     "alembic/*",
 ]
 

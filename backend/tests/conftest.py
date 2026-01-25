@@ -49,6 +49,52 @@ def client(mock_init_db):  # noqa: ARG001
 
 
 @pytest.fixture
+def mock_db_session():
+    """Create a mock database session for router tests.
+
+    This fixture creates a mock AsyncSession and sets up FastAPI's
+    dependency_overrides so that get_db returns this mock session.
+    The override is automatically cleaned up after the test.
+    """
+    from app.database import get_db
+    from app.main import app
+
+    mock_session = AsyncMock()
+    mock_session.add = MagicMock()
+    mock_session.commit = AsyncMock()
+    mock_session.execute = AsyncMock()
+    mock_session.scalar = AsyncMock()
+    mock_session.get = AsyncMock()
+    mock_session.delete = AsyncMock()
+
+    # Mock refresh to simulate database behavior (setting default values)
+    async def mock_refresh(obj):
+        from app.models.experiment import ExperimentStatus
+
+        if not hasattr(obj, "id") or obj.id is None:
+            obj.id = uuid4()
+        if not hasattr(obj, "status") or obj.status is None:
+            obj.status = ExperimentStatus.DRAFT
+        if not hasattr(obj, "is_active") or obj.is_active is None:
+            obj.is_active = True
+        if not hasattr(obj, "created_at") or obj.created_at is None:
+            obj.created_at = datetime.utcnow()
+        if not hasattr(obj, "updated_at") or obj.updated_at is None:
+            obj.updated_at = datetime.utcnow()
+        if not hasattr(obj, "deleted_at"):
+            obj.deleted_at = None
+
+    mock_session.refresh = mock_refresh
+
+    async def override_get_db():
+        yield mock_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    yield mock_session
+    app.dependency_overrides.pop(get_db, None)
+
+
+@pytest.fixture
 def mock_db():
     """Create a mock AsyncSession for database operations."""
     mock_session = AsyncMock()

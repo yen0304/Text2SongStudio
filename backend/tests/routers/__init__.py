@@ -1,1 +1,0 @@
-"""Router endpoint tests."""
