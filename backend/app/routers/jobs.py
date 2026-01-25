@@ -264,9 +264,7 @@ async def delete_job(
 
     # Delete associated feedback (cascade)
     if job.audio_ids:
-        await db.execute(
-            delete(Feedback).where(Feedback.audio_id.in_(job.audio_ids))
-        )
+        await db.execute(delete(Feedback).where(Feedback.audio_id.in_(job.audio_ids)))
 
     # Soft-delete the job
     job.deleted_at = datetime.utcnow()

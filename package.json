@@ -18,11 +18,11 @@
   },
   "lint-staged": {
     "frontend/**/*.{ts,tsx,js,jsx}": [
-      "cd frontend && npm run lint"
+      "bash -c 'cd frontend && npm run lint'"
     ],
     "backend/**/*.py": [
-      "cd backend && uv run ruff format --check",
-      "cd backend && uv run ruff check"
+      "bash -c 'cd backend && uv run ruff format --check .'",
+      "bash -c 'cd backend && uv run ruff check .'"
     ]
   }
 }
