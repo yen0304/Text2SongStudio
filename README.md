@@ -5,8 +5,8 @@
 # Text2Song Studio
 
 [![CI](https://github.com/yen0304/Text2SongStudio/actions/workflows/ci.yml/badge.svg)](https://github.com/yen0304/Text2SongStudio/actions/workflows/ci.yml)
-[![Backend Coverage](https://codecov.io/gh/yen0304/Text2SongStudio/graph/badge.svg?flag=backend)](https://codecov.io/gh/yen0304/Text2SongStudio?flags[0]=backend)
-[![Frontend Coverage](https://codecov.io/gh/yen0304/Text2SongStudio/graph/badge.svg?flag=frontend)](https://codecov.io/gh/yen0304/Text2SongStudio?flags[0]=frontend)
+[![Backend Coverage](https://img.shields.io/codecov/c/github/yen0304/Text2SongStudio?flag=backend&label=backend%20coverage)](https://codecov.io/gh/yen0304/Text2SongStudio)
+[![Frontend Coverage](https://img.shields.io/codecov/c/github/yen0304/Text2SongStudio?flag=frontend&label=frontend%20coverage)](https://codecov.io/gh/yen0304/Text2SongStudio)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Node.js](https://img.shields.io/badge/node.js-18+-green.svg)](https://nodejs.org/)
