@@ -18,6 +18,7 @@ import type { PaginatedResponse } from '../types/common';
 
 export interface ListExperimentsParams {
   status?: string;
+  include_archived?: boolean;
   limit?: number;
   offset?: number;
 }
@@ -29,6 +30,7 @@ export const experimentsApi = {
   list: (params?: ListExperimentsParams) => {
     const query = buildQueryString({
       status: params?.status,
+      include_archived: params?.include_archived,
       limit: params?.limit,
       offset: params?.offset,
     });
@@ -60,10 +62,22 @@ export const experimentsApi = {
     }),
 
   /**
-   * Delete an experiment
+   * Delete an experiment (archives it)
    */
   delete: (id: string) =>
     fetchApi<void>(`/experiments/${id}`, { method: 'DELETE' }),
+
+  /**
+   * Archive an experiment
+   */
+  archive: (id: string) =>
+    fetchApi<Experiment>(`/experiments/${id}/archive`, { method: 'POST' }),
+
+  /**
+   * Unarchive an experiment
+   */
+  unarchive: (id: string) =>
+    fetchApi<Experiment>(`/experiments/${id}/unarchive`, { method: 'POST' }),
 
   /**
    * Create a new run for an experiment

@@ -8,6 +8,18 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { experimentsApi, Experiment } from '@/lib/api';
 import {
   Loader2,
@@ -18,6 +30,8 @@ import {
   Clock,
   Play,
   X,
+  Archive,
+  ArchiveRestore,
 } from 'lucide-react';
 
 const statusConfig: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
@@ -25,6 +39,7 @@ const statusConfig: Record<string, { icon: React.ReactNode; color: string; label
   running: { icon: <Play size={14} />, color: 'bg-blue-500/10 text-blue-600', label: 'Running' },
   completed: { icon: <CheckCircle size={14} />, color: 'bg-green-500/10 text-green-600', label: 'Completed' },
   failed: { icon: <XCircle size={14} />, color: 'bg-red-500/10 text-red-600', label: 'Failed' },
+  archived: { icon: <Archive size={14} />, color: 'bg-orange-500/10 text-orange-600', label: 'Archived' },
 };
 
 function formatTime(dateStr: string): string {
@@ -47,10 +62,13 @@ export default function ExperimentsPage() {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState<Experiment | null>(null);
+  const [archiving, setArchiving] = useState(false);
 
   const fetchExperiments = async () => {
     try {
-      const data = await experimentsApi.list();
+      const data = await experimentsApi.list({ include_archived: showArchived });
       setExperiments(data.items);
     } catch (error) {
       console.error('Failed to fetch experiments:', error);
@@ -61,7 +79,7 @@ export default function ExperimentsPage() {
 
   useEffect(() => {
     fetchExperiments();
-  }, []);
+  }, [showArchived]);
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
@@ -83,6 +101,25 @@ export default function ExperimentsPage() {
     }
   };
 
+  const handleArchive = async () => {
+    if (!archiveTarget) return;
+    
+    setArchiving(true);
+    try {
+      if (archiveTarget.status === 'archived') {
+        await experimentsApi.unarchive(archiveTarget.id);
+      } else {
+        await experimentsApi.archive(archiveTarget.id);
+      }
+      setArchiveTarget(null);
+      fetchExperiments();
+    } catch (error) {
+      console.error('Failed to archive/unarchive experiment:', error);
+    } finally {
+      setArchiving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -97,12 +134,46 @@ export default function ExperimentsPage() {
         title="Experiments"
         description="Training experiments and model iterations"
         actions={
-          <Button onClick={() => setShowCreateForm(true)}>
-            <Plus size={16} />
-            <span className="ml-2">New Experiment</span>
-          </Button>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="show-archived"
+                checked={showArchived}
+                onCheckedChange={setShowArchived}
+              />
+              <Label htmlFor="show-archived" className="text-sm">Show archived</Label>
+            </div>
+            <Button onClick={() => setShowCreateForm(true)}>
+              <Plus size={16} />
+              <span className="ml-2">New Experiment</span>
+            </Button>
+          </div>
         }
       />
+
+      {/* Archive Confirmation Dialog */}
+      <AlertDialog open={!!archiveTarget} onOpenChange={(open) => !open && setArchiveTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {archiveTarget?.status === 'archived' ? 'Unarchive' : 'Archive'} Experiment
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {archiveTarget?.status === 'archived' 
+                ? `Are you sure you want to unarchive "${archiveTarget?.name}"? It will appear in the default list again.`
+                : `Are you sure you want to archive "${archiveTarget?.name}"? You can unarchive it later.`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleArchive} disabled={archiving}>
+              {archiving && <Loader2 size={16} className="animate-spin mr-2" />}
+              {archiveTarget?.status === 'archived' ? 'Unarchive' : 'Archive'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Create Form */}
       {showCreateForm && (
@@ -168,6 +239,7 @@ export default function ExperimentsPage() {
                   <th className="text-left p-4 font-medium text-muted-foreground">Best Loss</th>
                   <th className="text-left p-4 font-medium text-muted-foreground">Status</th>
                   <th className="text-left p-4 font-medium text-muted-foreground">Created</th>
+                  <th className="text-right p-4 font-medium text-muted-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -197,6 +269,20 @@ export default function ExperimentsPage() {
                       </td>
                       <td className="p-4 text-muted-foreground">
                         {formatTime(exp.created_at)}
+                      </td>
+                      <td className="p-4 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setArchiveTarget(exp)}
+                          title={exp.status === 'archived' ? 'Unarchive' : 'Archive'}
+                        >
+                          {exp.status === 'archived' ? (
+                            <ArchiveRestore size={16} />
+                          ) : (
+                            <Archive size={16} />
+                          )}
+                        </Button>
                       </td>
                     </tr>
                   );
