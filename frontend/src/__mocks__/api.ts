@@ -38,6 +38,7 @@ export const createMockDataset = (overrides?: Partial<Dataset>): Dataset => ({
   export_path: null,
   is_exported: false,
   created_at: '2024-01-01T00:00:00Z',
+  deleted_at: null,
   ...overrides,
 });
 

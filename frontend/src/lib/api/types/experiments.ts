@@ -7,7 +7,7 @@ export interface Experiment {
   name: string;
   description: string | null;
   dataset_id: string | null;
-  status: 'draft' | 'running' | 'completed' | 'failed';
+  status: 'draft' | 'running' | 'completed' | 'failed' | 'archived';
   config: Record<string, unknown> | null;
   best_run_id: string | null;
   best_loss: number | null;
