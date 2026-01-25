@@ -23,6 +23,7 @@ router = APIRouter(prefix="/experiments", tags=["experiments"])
 @router.get("", response_model=ExperimentListResponse)
 async def list_experiments(
     status: str | None = Query(None, description="Filter by status"),
+    include_archived: bool = Query(False, description="Include archived experiments"),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
@@ -32,6 +33,9 @@ async def list_experiments(
 
     if status:
         query = query.where(Experiment.status == status)
+    elif not include_archived:
+        # Exclude archived by default unless specific status is requested
+        query = query.where(Experiment.status != ExperimentStatus.ARCHIVED)
 
     # Count total
     count_query = select(func.count()).select_from(query.subquery())
@@ -205,20 +209,101 @@ async def update_experiment(
     )
 
 
-@router.delete("/{experiment_id}", status_code=204)
-async def delete_experiment(
+@router.post("/{experiment_id}/archive", response_model=ExperimentResponse)
+async def archive_experiment(
     experiment_id: UUID,
     db: AsyncSession = Depends(get_db),
 ):
-    """Delete an experiment (soft delete - marks as deleted)."""
+    """Archive an experiment (hides from default list view)."""
     result = await db.execute(select(Experiment).where(Experiment.id == experiment_id))
     experiment = result.scalar_one_or_none()
 
     if not experiment:
         raise HTTPException(status_code=404, detail="Experiment not found")
 
-    # For now, hard delete. Could add soft delete later.
-    await db.delete(experiment)
+    if experiment.status == ExperimentStatus.ARCHIVED:
+        raise HTTPException(status_code=400, detail="Experiment is already archived")
+
+    experiment.status = ExperimentStatus.ARCHIVED
+    experiment.updated_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(experiment)
+
+    run_count_query = select(func.count()).where(
+        ExperimentRun.experiment_id == experiment.id
+    )
+    run_count = await db.scalar(run_count_query) or 0
+
+    return ExperimentResponse(
+        id=experiment.id,
+        name=experiment.name,
+        description=experiment.description,
+        dataset_id=experiment.dataset_id,
+        status=experiment.status.value,
+        config=experiment.config,
+        best_run_id=experiment.best_run_id,
+        best_loss=experiment.best_loss,
+        run_count=run_count,
+        created_at=experiment.created_at,
+        updated_at=experiment.updated_at,
+    )
+
+
+@router.post("/{experiment_id}/unarchive", response_model=ExperimentResponse)
+async def unarchive_experiment(
+    experiment_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Unarchive an experiment (restores to draft status)."""
+    result = await db.execute(select(Experiment).where(Experiment.id == experiment_id))
+    experiment = result.scalar_one_or_none()
+
+    if not experiment:
+        raise HTTPException(status_code=404, detail="Experiment not found")
+
+    if experiment.status != ExperimentStatus.ARCHIVED:
+        raise HTTPException(status_code=400, detail="Experiment is not archived")
+
+    experiment.status = ExperimentStatus.DRAFT
+    experiment.updated_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(experiment)
+
+    run_count_query = select(func.count()).where(
+        ExperimentRun.experiment_id == experiment.id
+    )
+    run_count = await db.scalar(run_count_query) or 0
+
+    return ExperimentResponse(
+        id=experiment.id,
+        name=experiment.name,
+        description=experiment.description,
+        dataset_id=experiment.dataset_id,
+        status=experiment.status.value,
+        config=experiment.config,
+        best_run_id=experiment.best_run_id,
+        best_loss=experiment.best_loss,
+        run_count=run_count,
+        created_at=experiment.created_at,
+        updated_at=experiment.updated_at,
+    )
+
+
+@router.delete("/{experiment_id}", status_code=204)
+async def delete_experiment(
+    experiment_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete an experiment (archives it instead of hard delete)."""
+    result = await db.execute(select(Experiment).where(Experiment.id == experiment_id))
+    experiment = result.scalar_one_or_none()
+
+    if not experiment:
+        raise HTTPException(status_code=404, detail="Experiment not found")
+
+    # Archive instead of hard delete to preserve run history
+    experiment.status = ExperimentStatus.ARCHIVED
+    experiment.updated_at = datetime.utcnow()
     await db.commit()
 
 

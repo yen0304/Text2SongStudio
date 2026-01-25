@@ -11,10 +11,11 @@ from app.database import Base
 
 
 class ExperimentStatus(str, Enum):
-    DRAFT = "draft"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
+    DRAFT = "DRAFT"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    ARCHIVED = "ARCHIVED"
 
 
 class RunStatus(str, Enum):
