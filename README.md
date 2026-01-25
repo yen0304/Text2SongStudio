@@ -5,6 +5,7 @@
 # Text2Song Studio
 
 [![CI](https://github.com/yen0304/Text2SongStudio/actions/workflows/ci.yml/badge.svg)](https://github.com/yen0304/Text2SongStudio/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/yen0304/Text2SongStudio/graph/badge.svg)](https://codecov.io/gh/yen0304/Text2SongStudio)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Node.js](https://img.shields.io/badge/node.js-18+-green.svg)](https://nodejs.org/)
@@ -301,6 +302,24 @@ npm run test:coverage  # With coverage
 
 ```bash
 npm run test:e2e
+```
+
+### Coverage Report
+
+Code coverage is tracked via [Codecov](https://codecov.io/gh/yen0304/Text2SongStudio). Coverage reports are automatically uploaded on each CI run.
+
+[![codecov](https://codecov.io/gh/yen0304/Text2SongStudio/graphs/sunburst.svg)](https://codecov.io/gh/yen0304/Text2SongStudio)
+
+To generate the coverage report locally:
+
+```bash
+# Backend
+cd backend
+uv run pytest --cov=app --cov-report=html
+
+# Frontend
+cd frontend
+npm run test:coverage
 ```
 
 ## Deployment

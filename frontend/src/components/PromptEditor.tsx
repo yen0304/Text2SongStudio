@@ -175,7 +175,7 @@ export function PromptEditor({ onPromptCreated, onSamplesGenerated }: PromptEdit
   };
 
   useEffect(() => {
-    api.listAdapters(true).then((response) => setAdapters(response.items)).catch(() => {});
+    api.listAdapters({ activeOnly: true }).then((response) => setAdapters(response.items)).catch(() => {});
   }, []);
 
   const handleGenerate = async () => {
@@ -374,7 +374,7 @@ export function PromptEditor({ onPromptCreated, onSamplesGenerated }: PromptEdit
                 { value: '', label: 'None (base model)' },
                 ...adapters.filter((a) => a.is_active).map((a) => ({
                   value: a.id,
-                  label: `${a.name} v${a.version}`,
+                  label: `${a.name}${a.current_version ? ` v${a.current_version}` : ''}`,
                 })),
               ]}
               value={selectedAdapter}

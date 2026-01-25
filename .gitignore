@@ -38,6 +38,7 @@ env/
 frontend/.next/
 frontend/out/
 frontend/.vercel
+frontend/coverage/
 
 # Testing
 .coverage

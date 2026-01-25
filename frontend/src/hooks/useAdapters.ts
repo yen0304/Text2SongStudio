@@ -13,7 +13,7 @@ export function useAdapters(activeOnly = false) {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await api.listAdapters(activeOnly);
+      const response = await api.listAdapters({ activeOnly });
       setAdapters(response.items);
       setTotal(response.total);
     } catch (err) {

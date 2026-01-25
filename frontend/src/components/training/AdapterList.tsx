@@ -44,7 +44,7 @@ function AdapterRow({
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <h3 className="font-medium">{adapter.name}</h3>
-              <Badge variant="outline">v{adapter.version}</Badge>
+              {adapter.current_version && <Badge variant="outline">v{adapter.current_version}</Badge>}
               <Badge variant={adapter.is_active ? 'default' : 'secondary'}>
                 {adapter.is_active ? 'Active' : 'Inactive'}
               </Badge>

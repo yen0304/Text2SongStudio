@@ -28,11 +28,7 @@ export function TrainingDashboard() {
 
   const handleToggleAdapter = async (adapter: Adapter) => {
     try {
-      if (adapter.is_active) {
-        await api.deactivateAdapter(adapter.id);
-      } else {
-        await api.activateAdapter(adapter.id);
-      }
+      await api.updateAdapter(adapter.id, { is_active: !adapter.is_active });
       refreshAdapters();
       if (selectedAdapter?.id === adapter.id) {
         setSelectedAdapter(null);

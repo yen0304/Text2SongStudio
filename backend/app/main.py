@@ -8,7 +8,6 @@ from app.database import init_db
 from app.routers import (
     ab_tests_router,
     adapters_router,
-    adapters_v2_router,
     audio_router,
     datasets_router,
     experiments_router,
@@ -54,7 +53,6 @@ app.include_router(generation_router)
 app.include_router(audio_router)
 app.include_router(feedback_router)
 app.include_router(adapters_router)
-app.include_router(adapters_v2_router, prefix="/api/v2")  # New v2 adapters API
 app.include_router(datasets_router)
 app.include_router(experiments_router)
 app.include_router(ab_tests_router)

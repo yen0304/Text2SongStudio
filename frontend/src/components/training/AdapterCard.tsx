@@ -18,7 +18,7 @@ export function AdapterCard({ adapter, onClose, onToggleActive }: AdapterCardPro
         <CardHeader>
           <div className="flex items-center gap-2">
             <CardTitle>{adapter.name}</CardTitle>
-            <Badge variant="outline">v{adapter.version}</Badge>
+            {adapter.current_version && <Badge variant="outline">v{adapter.current_version}</Badge>}
             <Badge variant={adapter.is_active ? 'default' : 'secondary'}>
               {adapter.is_active ? 'Active' : 'Inactive'}
             </Badge>
@@ -45,18 +45,11 @@ export function AdapterCard({ adapter, onClose, onToggleActive }: AdapterCardPro
             </div>
           </div>
 
-          <div>
-            <label className="text-sm font-medium text-muted-foreground">Storage Path</label>
-            <p className="mt-1 text-sm font-mono bg-muted p-2 rounded">
-              {adapter.storage_path}
-            </p>
-          </div>
-
-          {adapter.training_config && Object.keys(adapter.training_config).length > 0 && (
+          {adapter.config && Object.keys(adapter.config).length > 0 && (
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Training Config</label>
+              <label className="text-sm font-medium text-muted-foreground">Config</label>
               <pre className="mt-1 text-xs bg-muted p-2 rounded overflow-x-auto">
-                {JSON.stringify(adapter.training_config, null, 2)}
+                {JSON.stringify(adapter.config, null, 2)}
               </pre>
             </div>
           )}

@@ -1,7 +1,6 @@
 # API Routers
 from app.routers.ab_tests import router as ab_tests_router
 from app.routers.adapters import router as adapters_router
-from app.routers.adapters_v2 import router as adapters_v2_router
 from app.routers.audio import router as audio_router
 from app.routers.datasets import router as datasets_router
 from app.routers.experiments import router as experiments_router
@@ -19,7 +18,6 @@ __all__ = [
     "audio_router",
     "feedback_router",
     "adapters_router",
-    "adapters_v2_router",
     "datasets_router",
     "experiments_router",
     "ab_tests_router",

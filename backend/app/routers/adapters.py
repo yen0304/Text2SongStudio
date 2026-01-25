@@ -1,108 +1,73 @@
+"""
+Unified adapter router with version management and timeline support.
+"""
+
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.config import get_settings
 from app.database import get_db
-from app.models import Adapter
-from app.schemas import (
+from app.models.adapter import Adapter, AdapterVersion
+from app.models.experiment import ExperimentRun
+from app.schemas.adapter import (
     AdapterCreate,
+    AdapterDetailRead,
     AdapterListResponse,
+    AdapterRead,
     AdapterResponse,
+    AdapterTimelineEvent,
+    AdapterTimelineResponse,
     AdapterUpdate,
+    AdapterVersionRead,
 )
 
 router = APIRouter(prefix="/adapters", tags=["adapters"])
 settings = get_settings()
 
 
-@router.post("", response_model=AdapterResponse, status_code=201)
-async def register_adapter(
-    data: AdapterCreate,
-    db: AsyncSession = Depends(get_db),
-):
-    # Check for duplicate name+version
-    result = await db.execute(
-        select(Adapter).where(
-            and_(Adapter.name == data.name, Adapter.version == data.version)
-        )
-    )
-    if result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=409,
-            detail=f"Adapter '{data.name}' version '{data.version}' already exists",
-        )
-
-    # Validate base model compatibility
-    if data.base_model != settings.base_model_name:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Adapter base model '{data.base_model}' is not compatible with current base model '{settings.base_model_name}'",
-        )
-
-    adapter = Adapter(
-        name=data.name,
-        version=data.version,
-        description=data.description,
-        base_model=data.base_model,
-        storage_path=data.storage_path,
-        training_dataset_id=data.training_dataset_id,
-        training_config=data.training_config or {},
-    )
-    db.add(adapter)
-    await db.commit()
-    await db.refresh(adapter)
-
-    return AdapterResponse(
-        id=adapter.id,
-        name=adapter.name,
-        version=adapter.version,
-        description=adapter.description,
-        base_model=adapter.base_model,
-        storage_path=adapter.storage_path,
-        training_dataset_id=adapter.training_dataset_id,
-        training_config=adapter.training_config,
-        is_active=adapter.is_active,
-        created_at=adapter.created_at,
-    )
-
-
 @router.get("", response_model=AdapterListResponse)
 async def list_adapters(
-    active_only: bool = Query(False),
-    base_model: str | None = None,
     db: AsyncSession = Depends(get_db),
+    active_only: bool = Query(False),
+    status: str | None = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
 ):
+    """List all adapters with optional filters."""
     query = select(Adapter)
 
     if active_only:
         query = query.where(Adapter.is_active.is_(True))
-    if base_model:
-        query = query.where(Adapter.base_model == base_model)
+    if status:
+        query = query.where(Adapter.status == status)
 
-    query = query.order_by(Adapter.name, Adapter.version.desc())
+    # Get total count
+    count_result = await db.execute(select(func.count()).select_from(query.subquery()))
+    total = count_result.scalar() or 0
 
+    # Apply pagination and ordering
+    query = query.order_by(Adapter.created_at.desc()).offset(skip).limit(limit)
     result = await db.execute(query)
     adapters = result.scalars().all()
 
-    count_result = await db.execute(select(func.count()).select_from(query.subquery()))
-    total = count_result.scalar()
-
     return AdapterListResponse(
         items=[
-            AdapterResponse(
+            AdapterRead(
                 id=a.id,
                 name=a.name,
-                version=a.version,
                 description=a.description,
                 base_model=a.base_model,
-                storage_path=a.storage_path,
-                training_dataset_id=a.training_dataset_id,
-                training_config=a.training_config,
+                status=a.status,
+                current_version=a.current_version,
+                config=a.config,
                 is_active=a.is_active,
                 created_at=a.created_at,
+                updated_at=a.updated_at,
             )
             for a in adapters
         ],
@@ -110,60 +75,326 @@ async def list_adapters(
     )
 
 
-@router.get("/{adapter_id}", response_model=AdapterResponse)
+@router.get("/stats")
+async def get_adapter_stats(db: AsyncSession = Depends(get_db)):
+    """Get adapter statistics."""
+    # Total adapters
+    total_result = await db.execute(select(func.count(Adapter.id)))
+    total = total_result.scalar() or 0
+
+    # Active adapters
+    active_result = await db.execute(
+        select(func.count(Adapter.id)).where(Adapter.status == "active")
+    )
+    active = active_result.scalar() or 0
+
+    # Total versions
+    versions_result = await db.execute(select(func.count(AdapterVersion.id)))
+    total_versions = versions_result.scalar() or 0
+
+    return {
+        "total": total,
+        "active": active,
+        "archived": total - active,
+        "total_versions": total_versions,
+    }
+
+
+@router.get("/{adapter_id}", response_model=AdapterDetailRead)
 async def get_adapter(
     adapter_id: UUID,
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Adapter).where(Adapter.id == adapter_id))
+    """Get adapter details with versions."""
+    query = (
+        select(Adapter)
+        .options(selectinload(Adapter.versions))
+        .where(Adapter.id == adapter_id)
+    )
+    result = await db.execute(query)
     adapter = result.scalar_one_or_none()
 
     if not adapter:
         raise HTTPException(status_code=404, detail="Adapter not found")
 
-    return AdapterResponse(
+    return AdapterDetailRead(
         id=adapter.id,
         name=adapter.name,
-        version=adapter.version,
         description=adapter.description,
         base_model=adapter.base_model,
-        storage_path=adapter.storage_path,
-        training_dataset_id=adapter.training_dataset_id,
-        training_config=adapter.training_config,
+        status=adapter.status,
+        current_version=adapter.current_version,
+        config=adapter.config,
         is_active=adapter.is_active,
         created_at=adapter.created_at,
+        updated_at=adapter.updated_at,
+        versions=[
+            AdapterVersionRead(
+                id=v.id,
+                adapter_id=v.adapter_id,
+                version=v.version,
+                description=v.description,
+                is_active=v.is_active,
+                created_at=v.created_at,
+            )
+            for v in adapter.versions
+        ],
     )
 
 
-@router.patch("/{adapter_id}", response_model=AdapterResponse)
-async def update_adapter(
+@router.get("/{adapter_id}/timeline", response_model=AdapterTimelineResponse)
+async def get_adapter_timeline(
     adapter_id: UUID,
-    data: AdapterUpdate,
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Adapter).where(Adapter.id == adapter_id))
-    adapter = result.scalar_one_or_none()
+    """Get timeline of adapter evolution including training runs."""
+    # Get adapter
+    adapter_result = await db.execute(select(Adapter).where(Adapter.id == adapter_id))
+    adapter = adapter_result.scalar_one_or_none()
 
     if not adapter:
         raise HTTPException(status_code=404, detail="Adapter not found")
 
-    if data.description is not None:
-        adapter.description = data.description
-    if data.is_active is not None:
-        adapter.is_active = data.is_active
+    events: list[AdapterTimelineEvent] = []
 
+    # Add adapter creation event
+    events.append(
+        AdapterTimelineEvent(
+            id=str(adapter.id),
+            type="created",
+            timestamp=adapter.created_at,
+            title="Adapter Created",
+            description=f"Adapter '{adapter.name}' was created",
+            metadata={"adapter_id": str(adapter.id)},
+        )
+    )
+
+    # Get all versions
+    versions_result = await db.execute(
+        select(AdapterVersion)
+        .where(AdapterVersion.adapter_id == adapter_id)
+        .order_by(AdapterVersion.created_at)
+    )
+    versions = versions_result.scalars().all()
+
+    for version in versions:
+        events.append(
+            AdapterTimelineEvent(
+                id=str(version.id),
+                type="version",
+                timestamp=version.created_at,
+                title=f"Version {version.version}",
+                description=version.description or "New version published",
+                metadata={
+                    "version_id": str(version.id),
+                    "version": version.version,
+                    "is_active": version.is_active,
+                },
+            )
+        )
+
+    # Get training runs
+    runs_result = await db.execute(
+        select(ExperimentRun)
+        .where(ExperimentRun.adapter_id == adapter_id)
+        .order_by(ExperimentRun.created_at)
+    )
+    runs = runs_result.scalars().all()
+
+    for run in runs:
+        status_text = {
+            "pending": "Training scheduled",
+            "running": "Training in progress",
+            "completed": "Training completed",
+            "failed": "Training failed",
+            "cancelled": "Training cancelled",
+        }.get(run.status, run.status)
+
+        events.append(
+            AdapterTimelineEvent(
+                id=str(run.id),
+                type="training",
+                timestamp=run.started_at or run.created_at,
+                title=f"Training Run: {run.name or run.id.hex[:8]}",
+                description=status_text,
+                metadata={
+                    "run_id": str(run.id),
+                    "status": run.status,
+                    "final_loss": run.final_loss,
+                },
+            )
+        )
+
+    # Sort events by timestamp
+    events.sort(key=lambda e: e.timestamp)
+
+    return AdapterTimelineResponse(
+        adapter_id=str(adapter.id),
+        adapter_name=adapter.name,
+        events=events,
+        total_versions=len(versions),
+        total_training_runs=len(runs),
+    )
+
+
+@router.post("", response_model=AdapterRead, status_code=201)
+async def create_adapter(
+    adapter_in: AdapterCreate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new adapter."""
+    adapter = Adapter(
+        name=adapter_in.name,
+        description=adapter_in.description,
+        base_model=adapter_in.base_model or settings.base_model_name,
+        storage_path=adapter_in.storage_path,
+        training_dataset_id=adapter_in.training_dataset_id,
+        training_config=adapter_in.training_config or {},
+        config=adapter_in.config,
+    )
+    db.add(adapter)
     await db.commit()
     await db.refresh(adapter)
 
-    return AdapterResponse(
+    return AdapterRead(
         id=adapter.id,
         name=adapter.name,
-        version=adapter.version,
         description=adapter.description,
         base_model=adapter.base_model,
-        storage_path=adapter.storage_path,
-        training_dataset_id=adapter.training_dataset_id,
-        training_config=adapter.training_config,
+        status=adapter.status,
+        current_version=adapter.current_version,
+        config=adapter.config,
         is_active=adapter.is_active,
         created_at=adapter.created_at,
+        updated_at=adapter.updated_at,
     )
+
+
+@router.patch("/{adapter_id}", response_model=AdapterRead)
+async def update_adapter(
+    adapter_id: UUID,
+    adapter_in: AdapterUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Update an adapter."""
+    result = await db.execute(select(Adapter).where(Adapter.id == adapter_id))
+    adapter = result.scalar_one_or_none()
+
+    if not adapter:
+        raise HTTPException(status_code=404, detail="Adapter not found")
+
+    update_data = adapter_in.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(adapter, field, value)
+
+    adapter.updated_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(adapter)
+
+    return AdapterRead(
+        id=adapter.id,
+        name=adapter.name,
+        description=adapter.description,
+        base_model=adapter.base_model,
+        status=adapter.status,
+        current_version=adapter.current_version,
+        config=adapter.config,
+        is_active=adapter.is_active,
+        created_at=adapter.created_at,
+        updated_at=adapter.updated_at,
+    )
+
+
+@router.delete("/{adapter_id}")
+async def delete_adapter(
+    adapter_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete an adapter."""
+    result = await db.execute(select(Adapter).where(Adapter.id == adapter_id))
+    adapter = result.scalar_one_or_none()
+
+    if not adapter:
+        raise HTTPException(status_code=404, detail="Adapter not found")
+
+    await db.delete(adapter)
+    await db.commit()
+    return {"status": "deleted"}
+
+
+@router.post("/{adapter_id}/versions", response_model=AdapterVersionRead)
+async def create_adapter_version(
+    adapter_id: UUID,
+    version: str,
+    description: str | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new version for an adapter."""
+    # Verify adapter exists
+    result = await db.execute(select(Adapter).where(Adapter.id == adapter_id))
+    adapter = result.scalar_one_or_none()
+
+    if not adapter:
+        raise HTTPException(status_code=404, detail="Adapter not found")
+
+    # Deactivate previous active versions
+    await db.execute(
+        AdapterVersion.__table__.update()
+        .where(AdapterVersion.adapter_id == adapter_id)
+        .values(is_active=False)
+    )
+
+    # Create new version
+    adapter_version = AdapterVersion(
+        adapter_id=adapter_id,
+        version=version,
+        description=description,
+        is_active=True,
+    )
+    db.add(adapter_version)
+
+    # Update adapter's current version
+    adapter.current_version = version
+    adapter.updated_at = datetime.utcnow()
+
+    await db.commit()
+    await db.refresh(adapter_version)
+    return adapter_version
+
+
+@router.patch("/{adapter_id}/versions/{version_id}/activate")
+async def activate_adapter_version(
+    adapter_id: UUID,
+    version_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Activate a specific adapter version."""
+    # Verify version exists
+    result = await db.execute(
+        select(AdapterVersion).where(
+            AdapterVersion.id == version_id, AdapterVersion.adapter_id == adapter_id
+        )
+    )
+    version = result.scalar_one_or_none()
+
+    if not version:
+        raise HTTPException(status_code=404, detail="Version not found")
+
+    # Deactivate all versions
+    await db.execute(
+        AdapterVersion.__table__.update()
+        .where(AdapterVersion.adapter_id == adapter_id)
+        .values(is_active=False)
+    )
+
+    # Activate selected version
+    version.is_active = True
+
+    # Update adapter's current version
+    adapter_result = await db.execute(select(Adapter).where(Adapter.id == adapter_id))
+    adapter = adapter_result.scalar_one()
+    adapter.current_version = version.version
+    adapter.updated_at = datetime.utcnow()
+
+    await db.commit()
+    return {"status": "activated", "version": version.version}

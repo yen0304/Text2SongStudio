@@ -7,7 +7,6 @@ from pydantic import BaseModel, Field
 
 class AdapterCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
-    version: str | None = Field(None, pattern=r"^\d+\.\d+\.\d+$")
     description: str | None = None
     base_model: str = "musicgen-small"
     storage_path: str | None = None
@@ -24,41 +23,30 @@ class AdapterUpdate(BaseModel):
     config: dict | None = None
 
 
-class AdapterResponse(BaseModel):
-    id: UUID
-    name: str
-    version: str
-    description: str | None
-    base_model: str
-    storage_path: str
-    training_dataset_id: UUID | None
-    training_config: dict | None
-    is_active: bool
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-class AdapterListResponse(BaseModel):
-    items: list[AdapterResponse]
-    total: int
-
-
-# Enhanced schemas for v2 adapters router
 class AdapterRead(BaseModel):
+    """Unified adapter response schema."""
     id: UUID
     name: str
     description: str | None = None
     base_model: str
-    status: str
+    status: str = "active"
     current_version: str | None = None
     config: dict[str, Any] | None = None
+    is_active: bool = True
     created_at: datetime
     updated_at: datetime | None = None
 
     class Config:
         from_attributes = True
+
+
+# Alias for backward compatibility
+AdapterResponse = AdapterRead
+
+
+class AdapterListResponse(BaseModel):
+    items: list[AdapterRead]
+    total: int
 
 
 class AdapterVersionRead(BaseModel):

@@ -15,7 +15,7 @@ export function AdapterSelector({ value, onChange }: AdapterSelectorProps) {
     { value: '', label: 'Base Model (facebook/musicgen-small)' },
     ...adapters.map((adapter) => ({
       value: adapter.id,
-      label: `${adapter.name} v${adapter.version}`,
+      label: `${adapter.name}${adapter.current_version ? ` v${adapter.current_version}` : ''}`,
     })),
   ];
 

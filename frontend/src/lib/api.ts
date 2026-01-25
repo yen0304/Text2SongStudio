@@ -81,14 +81,52 @@ export interface FeedbackListResponse {
 export interface Adapter {
   id: string;
   name: string;
-  version: string;
-  description: string;
+  description: string | null;
   base_model: string;
-  storage_path: string;
-  training_dataset_id: string | null;
-  training_config: Record<string, unknown>;
+  status: 'active' | 'archived';
+  current_version: string | null;
+  config: Record<string, unknown> | null;
   is_active: boolean;
   created_at: string;
+  updated_at: string | null;
+}
+
+export interface AdapterVersion {
+  id: string;
+  adapter_id: string;
+  version: string;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface AdapterDetail extends Adapter {
+  versions: AdapterVersion[];
+}
+
+export interface AdapterTimelineEvent {
+  id: string;
+  type: 'created' | 'version' | 'training';
+  timestamp: string;
+  title: string;
+  description: string | null;
+  metadata: {
+    adapter_id?: string;
+    version_id?: string;
+    version?: string;
+    is_active?: boolean;
+    run_id?: string;
+    status?: string;
+    final_loss?: number | null;
+  } | null;
+}
+
+export interface AdapterTimeline {
+  adapter_id: string;
+  adapter_name: string;
+  events: AdapterTimelineEvent[];
+  total_versions: number;
+  total_training_runs: number;
 }
 
 export interface Dataset {
@@ -248,24 +286,52 @@ export const api = {
   },
 
   // Adapters
-  listAdapters: async (activeOnly = false) => {
-    const params = activeOnly ? '?active_only=true' : '';
-    const response = await fetchApi<{ items: Adapter[]; total: number }>(`/adapters${params}`);
-    return response;
+  listAdapters: (params?: { activeOnly?: boolean; status?: string; skip?: number; limit?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.activeOnly) searchParams.set('active_only', 'true');
+    if (params?.status) searchParams.set('status', params.status);
+    if (params?.skip) searchParams.set('skip', params.skip.toString());
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    const query = searchParams.toString();
+    return fetchApi<{ items: Adapter[]; total: number }>(`/adapters${query ? `?${query}` : ''}`);
   },
 
-  getAdapter: (id: string) => fetchApi<Adapter>(`/adapters/${id}`),
+  getAdapterStats: () =>
+    fetchApi<{
+      total: number;
+      active: number;
+      archived: number;
+      total_versions: number;
+    }>('/adapters/stats'),
 
-  activateAdapter: (id: string) =>
-    fetchApi<Adapter>(`/adapters/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ is_active: true }),
+  getAdapter: (id: string) => fetchApi<AdapterDetail>(`/adapters/${id}`),
+
+  getAdapterTimeline: (id: string) =>
+    fetchApi<AdapterTimeline>(`/adapters/${id}/timeline`),
+
+  createAdapter: (data: { name: string; description?: string; base_model?: string; config?: Record<string, unknown> }) =>
+    fetchApi<Adapter>('/adapters', {
+      method: 'POST',
+      body: JSON.stringify(data),
     }),
 
-  deactivateAdapter: (id: string) =>
+  updateAdapter: (id: string, data: { name?: string; description?: string; status?: string; is_active?: boolean; config?: Record<string, unknown> }) =>
     fetchApi<Adapter>(`/adapters/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify({ is_active: false }),
+      body: JSON.stringify(data),
+    }),
+
+  deleteAdapter: (id: string) =>
+    fetchApi<void>(`/adapters/${id}`, { method: 'DELETE' }),
+
+  createAdapterVersion: (adapterId: string, data: { version: string; description?: string }) =>
+    fetchApi<AdapterVersion>(`/adapters/${adapterId}/versions?version=${encodeURIComponent(data.version)}${data.description ? `&description=${encodeURIComponent(data.description)}` : ''}`, {
+      method: 'POST',
+    }),
+
+  activateAdapterVersion: (adapterId: string, versionId: string) =>
+    fetchApi<{ status: string; version: string }>(`/adapters/${adapterId}/versions/${versionId}/activate`, {
+      method: 'PATCH',
     }),
 
   // Datasets
@@ -454,107 +520,7 @@ export const api = {
 
   getABTestResults: (testId: string) =>
     fetchApi<ABTestResults>(`/ab-tests/${testId}/results`),
-
-  // Enhanced Adapters (v2 API)
-  listAdaptersV2: (params?: { status?: string; skip?: number; limit?: number }) => {
-    const searchParams = new URLSearchParams();
-    if (params?.status) searchParams.set('status', params.status);
-    if (params?.skip) searchParams.set('skip', params.skip.toString());
-    if (params?.limit) searchParams.set('limit', params.limit.toString());
-    const query = searchParams.toString();
-    return fetchApi<AdapterV2[]>(`/api/v2/adapters${query ? `?${query}` : ''}`);
-  },
-
-  getAdapterStats: () =>
-    fetchApi<{
-      total: number;
-      active: number;
-      archived: number;
-      total_versions: number;
-    }>('/api/v2/adapters/stats'),
-
-  getAdapterV2: (id: string) =>
-    fetchApi<AdapterDetailV2>(`/api/v2/adapters/${id}`),
-
-  getAdapterTimeline: (id: string) =>
-    fetchApi<AdapterTimeline>(`/api/v2/adapters/${id}/timeline`),
-
-  createAdapterV2: (data: { name: string; description?: string; base_model?: string; config?: Record<string, unknown> }) =>
-    fetchApi<AdapterV2>('/api/v2/adapters', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }),
-
-  updateAdapterV2: (id: string, data: { name?: string; description?: string; status?: string; config?: Record<string, unknown> }) =>
-    fetchApi<AdapterV2>(`/api/v2/adapters/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-    }),
-
-  deleteAdapterV2: (id: string) =>
-    fetchApi<void>(`/api/v2/adapters/${id}`, { method: 'DELETE' }),
-
-  createAdapterVersion: (adapterId: string, data: { version: string; description?: string }) =>
-    fetchApi<AdapterVersionV2>(`/api/v2/adapters/${adapterId}/versions?version=${encodeURIComponent(data.version)}${data.description ? `&description=${encodeURIComponent(data.description)}` : ''}`, {
-      method: 'POST',
-    }),
-
-  activateAdapterVersion: (adapterId: string, versionId: string) =>
-    fetchApi<{ status: string; version: string }>(`/api/v2/adapters/${adapterId}/versions/${versionId}/activate`, {
-      method: 'PATCH',
-    }),
 };
-
-// Enhanced Adapter types (v2 API)
-export interface AdapterV2 {
-  id: string;
-  name: string;
-  description: string | null;
-  base_model: string;
-  status: 'active' | 'archived';
-  current_version: string | null;
-  config: Record<string, unknown> | null;
-  created_at: string;
-  updated_at: string | null;
-}
-
-export interface AdapterVersionV2 {
-  id: string;
-  adapter_id: string;
-  version: string;
-  description: string | null;
-  is_active: boolean;
-  created_at: string;
-}
-
-export interface AdapterDetailV2 extends AdapterV2 {
-  versions: AdapterVersionV2[];
-}
-
-export interface AdapterTimelineEvent {
-  id: string;
-  type: 'created' | 'version' | 'training';
-  timestamp: string;
-  title: string;
-  description: string | null;
-  metadata: {
-    adapter_id?: string;
-    version_id?: string;
-    version?: string;
-    is_active?: boolean;
-    run_id?: string;
-    status?: string;
-    final_loss?: number | null;
-  } | null;
-}
-
-export interface AdapterTimeline {
-  adapter_id: string;
-  adapter_name: string;
-  events: AdapterTimelineEvent[];
-  total_versions: number;
-  total_training_runs: number;
-}
 
 // Additional types for new endpoints
 export interface Experiment {
