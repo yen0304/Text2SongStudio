@@ -4,31 +4,12 @@
 TBD - created by archiving change add-text2song-studio. Update Purpose after archive.
 ## Requirements
 ### Requirement: Generation Job Submission
-
 The system SHALL allow users to submit audio generation jobs for a given prompt.
 
-#### Scenario: Submit generation job
-
-- **WHEN** a user submits a generation request with a prompt ID
-- **THEN** the system creates a generation job and returns a job ID
-- **AND** the job is queued for processing
-
-#### Scenario: Submit generation with multiple samples
-
-- **WHEN** a user requests multiple samples (e.g., num_samples=4)
-- **THEN** the system generates the specified number of audio samples
-- **AND** each sample uses a different random seed
-
-#### Scenario: Submit generation with adapter selection
-
-- **WHEN** a user specifies a LoRA adapter ID in the generation request
-- **THEN** the system loads the specified adapter for this generation
-- **AND** the generated audio reflects the adapter's trained characteristics
-
-#### Scenario: Reject generation for invalid prompt
-
-- **WHEN** a user submits a generation request with a non-existent prompt ID
-- **THEN** the system rejects the request with a not-found error
+#### Scenario: Submit generation with experiment tracking
+- **WHEN** a user submits generation with an experiment_id parameter
+- **THEN** the system links the job to the experiment
+- **AND** the job appears in the experiment's generation history
 
 ### Requirement: Generation Job Status
 
@@ -105,4 +86,58 @@ The system SHALL support side-by-side comparison of multiple audio samples.
 - **WHEN** a user requests comparison of samples generated with different adapters
 - **THEN** the system returns metadata identifying which adapter was used for each
 - **AND** enables A/B evaluation of adapter performance
+
+### Requirement: Job Feedback Aggregation
+
+The system SHALL provide aggregated feedback information for generation jobs.
+
+#### Scenario: View feedback summary in job status
+
+- **WHEN** a user retrieves a completed job's status
+- **THEN** the system MAY include a feedback summary (count, has_feedback flag)
+- **AND** provides a link/method to retrieve full feedback details
+
+#### Scenario: List jobs with feedback indicators
+
+- **WHEN** a user lists generation jobs
+- **THEN** each job MAY include a feedback indicator showing whether feedback exists
+- **AND** this helps users identify which jobs have been reviewed
+
+### Requirement: Job Queue Listing
+The system SHALL provide an API to list and filter generation jobs.
+
+#### Scenario: List all jobs
+- **WHEN** a user requests the job list without filters
+- **THEN** the system returns jobs ordered by creation date descending
+- **AND** supports pagination with limit and offset
+
+#### Scenario: Filter jobs by status
+- **WHEN** a user requests jobs with a status filter (queued, processing, completed, failed)
+- **THEN** the system returns only jobs matching that status
+
+#### Scenario: Filter jobs by adapter
+- **WHEN** a user requests jobs with an adapter ID filter
+- **THEN** the system returns only jobs that used that adapter
+
+#### Scenario: Filter jobs by date range
+- **WHEN** a user requests jobs with start_date and end_date parameters
+- **THEN** the system returns jobs created within that range
+
+#### Scenario: Get queue statistics
+- **WHEN** a user requests queue stats
+- **THEN** the system returns counts by status, average processing time, and throughput
+
+### Requirement: A/B Test Generation
+The system SHALL support batch generation for A/B testing.
+
+#### Scenario: Generate for A/B test
+- **WHEN** a user submits generation for an A/B test with two adapters
+- **THEN** the system creates generation jobs for both adapters using the same prompt
+- **AND** links both jobs to the A/B test record
+- **AND** uses the same seed for reproducibility
+
+#### Scenario: Track A/B generation progress
+- **WHEN** an A/B test has pending generations
+- **THEN** the system tracks overall progress (e.g., "4/10 pairs generated")
+- **AND** marks test as ready when all pairs complete
 

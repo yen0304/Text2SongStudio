@@ -30,22 +30,11 @@ The system SHALL maintain a registry of LoRA adapters as versioned artifacts.
 
 The system SHALL allow users to discover and browse available adapters.
 
-#### Scenario: List all adapters
+#### Scenario: List adapters with activation status
 
-- **WHEN** a user requests a list of adapters
-- **THEN** the system returns all registered adapters with metadata
-- **AND** indicates which adapters are currently active
-
-#### Scenario: Filter adapters by base model
-
-- **WHEN** a user filters adapters by base model compatibility
-- **THEN** the system returns only adapters compatible with the specified base model
-
-#### Scenario: Get adapter details
-
-- **WHEN** a user requests details for a specific adapter
-- **THEN** the system returns full metadata including description, training info, and usage statistics
-- **AND** includes feedback statistics for samples generated with this adapter
+- **WHEN** a user requests a list of adapters via UI
+- **THEN** the system clearly indicates which adapters are currently active
+- **AND** provides toggle controls for activation status
 
 ### Requirement: Adapter Lifecycle Management
 
@@ -84,4 +73,89 @@ The system SHALL validate adapter compatibility before loading.
 - **WHEN** a user requests generation with an adapter trained on a different base model
 - **THEN** the system rejects the request with a compatibility error
 - **AND** suggests compatible adapters
+
+### Requirement: Adapter Selection UI
+
+The system SHALL provide a web interface for selecting adapters during generation.
+
+#### Scenario: Select adapter for generation
+
+- **WHEN** a user opens the adapter selector in the prompt editor
+- **THEN** the system displays available active adapters
+- **AND** shows "Base Model" as the default option
+- **AND** passes the selected adapter ID to the generation request
+
+#### Scenario: View adapter in selector
+
+- **WHEN** a user views the adapter selector dropdown
+- **THEN** each adapter shows name, version, and brief description
+- **AND** indicates the currently selected adapter
+
+### Requirement: Adapter Management UI
+
+The system SHALL provide a web interface for browsing and managing adapters.
+
+#### Scenario: View adapter list
+
+- **WHEN** a user navigates to the training dashboard Adapters tab
+- **THEN** the system displays all registered adapters
+- **AND** shows name, version, base model, and active status for each
+
+#### Scenario: View adapter details
+
+- **WHEN** a user clicks on an adapter in the list
+- **THEN** the system displays full adapter details including description and training configuration
+- **AND** shows usage statistics if available
+
+#### Scenario: Toggle adapter activation
+
+- **WHEN** a user toggles the active status of an adapter
+- **THEN** the system updates the adapter's active status via API
+- **AND** reflects the change immediately in the UI
+- **AND** active adapters appear in the generation adapter selector
+
+#### Scenario: Filter adapters by status
+
+- **WHEN** a user applies the "active only" filter
+- **THEN** the system displays only active adapters
+- **AND** maintains filter state during tab navigation
+
+### Requirement: Version History View
+The system SHALL provide adapter version history grouped by adapter name.
+
+#### Scenario: List adapters with version grouping
+- **WHEN** a user requests the adapter list with `group_by_name=true`
+- **THEN** the system returns adapters grouped by base name
+- **AND** versions are ordered by creation date within each group
+
+#### Scenario: Get version timeline
+- **WHEN** a user requests the version timeline for an adapter name
+- **THEN** the system returns all versions with: version, loss metrics, training date, status
+- **AND** includes links to the training experiment/run
+
+### Requirement: Adapter Comparison
+The system SHALL support comparing adapter versions.
+
+#### Scenario: Compare adapter metrics
+- **WHEN** a user requests comparison of two adapter versions
+- **THEN** the system returns side-by-side metrics (training loss, evaluation scores)
+- **AND** highlights which version is better per metric
+
+#### Scenario: Quick A/B test from adapters
+- **WHEN** a user initiates A/B test from two adapter versions
+- **THEN** the system creates an A/B test pre-configured with those adapters
+- **AND** navigates to the test creation page with adapters pre-selected
+
+### Requirement: Adapter Metrics Tracking
+The system SHALL track performance metrics per adapter.
+
+#### Scenario: Record adapter usage metrics
+- **WHEN** an adapter is used for generation
+- **THEN** the system increments the adapter's usage count
+- **AND** tracks average rating of samples generated with this adapter
+
+#### Scenario: Get adapter performance summary
+- **WHEN** a user requests adapter performance
+- **THEN** the system returns: total generations, average rating, rating distribution
+- **AND** compares to base model performance if available
 

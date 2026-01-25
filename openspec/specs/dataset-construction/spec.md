@@ -35,24 +35,11 @@ The system SHALL create training datasets from collected feedback data.
 
 The system SHALL export datasets in formats suitable for training.
 
-#### Scenario: Export supervised dataset
+#### Scenario: Display training command after export
 
-- **WHEN** a user requests export of a supervised dataset
-- **THEN** the system generates a manifest file mapping prompts to audio file paths
-- **AND** includes rating labels for each sample
-- **AND** provides download links for all audio files
-
-#### Scenario: Export preference dataset
-
-- **WHEN** a user requests export of a preference dataset
-- **THEN** the system generates a manifest with (prompt, chosen_path, rejected_path) tuples
-- **AND** formats the data for compatibility with DPO training scripts
-
-#### Scenario: Export to Hugging Face format
-
-- **WHEN** a user requests export in Hugging Face Dataset format
-- **THEN** the system generates a dataset compatible with `datasets.load_from_disk()`
-- **AND** includes all metadata as dataset features
+- **WHEN** a user exports a dataset via the UI
+- **THEN** the system displays the CLI command to train with this dataset
+- **AND** the command is copyable to clipboard
 
 ### Requirement: Dataset Quality Metrics
 
@@ -75,4 +62,34 @@ The system SHALL provide quality metrics for datasets.
 - **WHEN** a user requests dataset statistics
 - **THEN** the system returns sample count, rating distribution, prompt diversity metrics
 - **AND** includes recommendations for dataset quality improvement
+
+### Requirement: Dataset Management UI
+
+The system SHALL provide a web interface for managing training datasets.
+
+#### Scenario: View dataset list
+
+- **WHEN** a user navigates to the training dashboard Datasets tab
+- **THEN** the system displays all datasets with name, type, sample count, and creation date
+- **AND** indicates export status for each dataset
+
+#### Scenario: Create dataset via UI
+
+- **WHEN** a user fills out the dataset creation form with name, type, and filter criteria
+- **THEN** the system shows a preview of matching sample count
+- **AND** creates the dataset when the user confirms
+- **AND** displays the new dataset in the list
+
+#### Scenario: Export dataset via UI
+
+- **WHEN** a user initiates export for a dataset
+- **THEN** the system shows export format options (JSONL, Hugging Face)
+- **AND** displays the export path after completion
+- **AND** shows the CLI training command for the exported dataset
+
+#### Scenario: View empty state
+
+- **WHEN** a user views the Datasets tab with no datasets created
+- **THEN** the system displays a helpful message explaining how to create a dataset
+- **AND** provides a button to open the creation form
 
