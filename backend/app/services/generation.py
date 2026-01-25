@@ -3,8 +3,12 @@ import uuid
 from datetime import datetime
 from uuid import UUID
 
+import soundfile as sf
+import torch
+from peft import PeftModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from transformers import AutoProcessor, MusicgenForConditionalGeneration
 
 from app.config import get_settings
 from app.models import Adapter, AudioSample, GenerationJob, JobStatus, Prompt
@@ -35,8 +39,6 @@ class GenerationService:
             return
 
         try:
-            from transformers import AutoProcessor, MusicgenForConditionalGeneration
-
             cls._processor = AutoProcessor.from_pretrained(
                 settings.base_model_name,
                 cache_dir=settings.model_cache_dir,
@@ -47,8 +49,6 @@ class GenerationService:
             )
 
             # Move to GPU if available
-            import torch
-
             if torch.cuda.is_available():
                 cls._model = cls._model.to("cuda")
         except Exception as e:
@@ -66,8 +66,6 @@ class GenerationService:
         # Remove current adapter if any
         if cls._current_adapter_id is not None:
             try:
-                from peft import PeftModel
-
                 if isinstance(cls._model, PeftModel):
                     cls._model = cls._model.unload()
             except Exception:
@@ -86,8 +84,6 @@ class GenerationService:
             raise ValueError(f"Adapter {adapter_id} not found")
 
         try:
-            from peft import PeftModel
-
             cls._model = PeftModel.from_pretrained(
                 cls._model,
                 adapter.storage_path,
@@ -107,9 +103,6 @@ class GenerationService:
         top_k: int = 250,
         top_p: float = 0.0,
     ) -> tuple[bytes, float, int]:
-        import soundfile as sf
-        import torch
-
         if cls._model is None:
             await cls.load_model()
 

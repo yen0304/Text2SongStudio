@@ -1,3 +1,4 @@
+import math
 from datetime import datetime
 from uuid import UUID
 
@@ -381,8 +382,6 @@ async def get_ab_test_results(
     significance = None
     if comparison_votes >= 10:
         # Approximate p-value using normal approximation
-        import math
-
         n = comparison_votes
         p_observed = a_win_rate
         p_expected = 0.5

@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Feedback, GenerationJob, JobStatus, Prompt
+from app.models import Adapter, Feedback, GenerationJob, JobStatus, Prompt
 from app.schemas import GenerationJobResponse, GenerationRequest
 from app.schemas.generation import (
     JobFeedbackResponse,
@@ -31,6 +31,19 @@ async def submit_generation(
     prompt = result.scalar_one_or_none()
     if not prompt:
         raise HTTPException(status_code=404, detail="Prompt not found")
+
+    # Verify adapter is not soft-deleted (if provided)
+    if data.adapter_id:
+        adapter_result = await db.execute(
+            select(Adapter).where(Adapter.id == data.adapter_id)
+        )
+        adapter = adapter_result.scalar_one_or_none()
+        if not adapter:
+            raise HTTPException(status_code=404, detail="Adapter not found")
+        if adapter.deleted_at:
+            raise HTTPException(
+                status_code=400, detail="Cannot use deleted adapter for generation"
+            )
 
     # Create job
     job = GenerationJob(

@@ -38,7 +38,7 @@ async def list_adapters(
     limit: int = Query(50, ge=1, le=100),
 ):
     """List all adapters with optional filters."""
-    query = select(Adapter)
+    query = select(Adapter).where(Adapter.deleted_at.is_(None))
 
     if active_only:
         query = query.where(Adapter.is_active.is_(True))
@@ -77,18 +77,27 @@ async def list_adapters(
 @router.get("/stats")
 async def get_adapter_stats(db: AsyncSession = Depends(get_db)):
     """Get adapter statistics."""
-    # Total adapters
-    total_result = await db.execute(select(func.count(Adapter.id)))
+    # Total adapters (exclude soft-deleted)
+    total_result = await db.execute(
+        select(func.count(Adapter.id)).where(Adapter.deleted_at.is_(None))
+    )
     total = total_result.scalar() or 0
 
-    # Active adapters
+    # Active adapters (exclude soft-deleted)
     active_result = await db.execute(
-        select(func.count(Adapter.id)).where(Adapter.status == "active")
+        select(func.count(Adapter.id)).where(
+            Adapter.status == "active",
+            Adapter.deleted_at.is_(None),
+        )
     )
     active = active_result.scalar() or 0
 
-    # Total versions
-    versions_result = await db.execute(select(func.count(AdapterVersion.id)))
+    # Total versions (exclude versions of soft-deleted adapters)
+    versions_result = await db.execute(
+        select(func.count(AdapterVersion.id))
+        .join(Adapter)
+        .where(Adapter.deleted_at.is_(None))
+    )
     total_versions = versions_result.scalar() or 0
 
     return {
@@ -108,7 +117,7 @@ async def get_adapter(
     query = (
         select(Adapter)
         .options(selectinload(Adapter.versions))
-        .where(Adapter.id == adapter_id)
+        .where(Adapter.id == adapter_id, Adapter.deleted_at.is_(None))
     )
     result = await db.execute(query)
     adapter = result.scalar_one_or_none()
@@ -147,8 +156,10 @@ async def get_adapter_timeline(
     db: AsyncSession = Depends(get_db),
 ):
     """Get timeline of adapter evolution including training runs."""
-    # Get adapter
-    adapter_result = await db.execute(select(Adapter).where(Adapter.id == adapter_id))
+    # Get adapter (exclude soft-deleted)
+    adapter_result = await db.execute(
+        select(Adapter).where(Adapter.id == adapter_id, Adapter.deleted_at.is_(None))
+    )
     adapter = adapter_result.scalar_one_or_none()
 
     if not adapter:
@@ -276,7 +287,9 @@ async def update_adapter(
     db: AsyncSession = Depends(get_db),
 ):
     """Update an adapter."""
-    result = await db.execute(select(Adapter).where(Adapter.id == adapter_id))
+    result = await db.execute(
+        select(Adapter).where(Adapter.id == adapter_id, Adapter.deleted_at.is_(None))
+    )
     adapter = result.scalar_one_or_none()
 
     if not adapter:
@@ -309,16 +322,26 @@ async def delete_adapter(
     adapter_id: UUID,
     db: AsyncSession = Depends(get_db),
 ):
-    """Delete an adapter."""
-    result = await db.execute(select(Adapter).where(Adapter.id == adapter_id))
+    """
+    Delete an adapter (soft-delete).
+
+    The adapter will no longer appear in listings or be available for new generations.
+    Existing jobs that used this adapter will show "Deleted Adapter" indicator.
+    """
+    result = await db.execute(
+        select(Adapter).where(Adapter.id == adapter_id, Adapter.deleted_at.is_(None))
+    )
     adapter = result.scalar_one_or_none()
 
     if not adapter:
         raise HTTPException(status_code=404, detail="Adapter not found")
 
-    await db.delete(adapter)
+    # Soft-delete
+    adapter.deleted_at = datetime.utcnow()
+    adapter.is_active = False
     await db.commit()
-    return {"status": "deleted"}
+
+    return {"status": "deleted", "adapter_id": str(adapter_id)}
 
 
 @router.post("/{adapter_id}/versions", response_model=AdapterVersionRead)
@@ -329,8 +352,10 @@ async def create_adapter_version(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new version for an adapter."""
-    # Verify adapter exists
-    result = await db.execute(select(Adapter).where(Adapter.id == adapter_id))
+    # Verify adapter exists and is not soft-deleted
+    result = await db.execute(
+        select(Adapter).where(Adapter.id == adapter_id, Adapter.deleted_at.is_(None))
+    )
     adapter = result.scalar_one_or_none()
 
     if not adapter:

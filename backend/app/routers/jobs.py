@@ -1,12 +1,13 @@
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func, select
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Adapter, GenerationJob, JobStatus, Prompt
+from app.models import Adapter, Feedback, GenerationJob, JobStatus, Prompt
+from app.services.generation import GenerationService
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -22,7 +23,7 @@ async def list_jobs(
     db: AsyncSession = Depends(get_db),
 ):
     """List all generation jobs with optional filtering."""
-    query = select(GenerationJob)
+    query = select(GenerationJob).where(GenerationJob.deleted_at.is_(None))
 
     if status:
         query = query.where(GenerationJob.status == status)
@@ -60,7 +61,7 @@ async def list_jobs(
                     prompt.text[:80] + "..." if len(prompt.text) > 80 else prompt.text
                 )
 
-        # Get adapter name
+        # Get adapter name (show "Deleted Adapter" for soft-deleted adapters)
         adapter_name = None
         if job.adapter_id:
             adapter_result = await db.execute(
@@ -68,7 +69,10 @@ async def list_jobs(
             )
             adapter = adapter_result.scalar_one_or_none()
             if adapter:
-                adapter_name = f"{adapter.name} v{adapter.version}"
+                if adapter.deleted_at:
+                    adapter_name = "Deleted Adapter"
+                else:
+                    adapter_name = f"{adapter.name} v{adapter.version}"
 
         # Calculate duration
         duration_seconds = None
@@ -110,18 +114,22 @@ async def get_job_stats(
     db: AsyncSession = Depends(get_db),
 ):
     """Get queue statistics."""
-    # Count by status
+    # Count by status (exclude soft-deleted jobs)
     status_counts = {}
     for status in JobStatus:
-        count_query = select(func.count()).where(GenerationJob.status == status)
+        count_query = select(func.count()).where(
+            GenerationJob.status == status,
+            GenerationJob.deleted_at.is_(None),
+        )
         count = await db.scalar(count_query) or 0
         status_counts[status.value] = count
 
-    # Calculate average processing time for completed jobs (last 100)
+    # Calculate average processing time for completed jobs (last 100, exclude soft-deleted)
     completed_jobs = await db.execute(
         select(GenerationJob)
         .where(GenerationJob.status == JobStatus.COMPLETED)
         .where(GenerationJob.completed_at.isnot(None))
+        .where(GenerationJob.deleted_at.is_(None))
         .order_by(GenerationJob.completed_at.desc())
         .limit(100)
     )
@@ -137,11 +145,14 @@ async def get_job_stats(
         if durations:
             avg_processing_time = sum(durations) / len(durations)
 
-    # Jobs in last 24 hours
+    # Jobs in last 24 hours (exclude soft-deleted)
     yesterday = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     today_count = (
         await db.scalar(
-            select(func.count()).where(GenerationJob.created_at >= yesterday)
+            select(func.count()).where(
+                GenerationJob.created_at >= yesterday,
+                GenerationJob.deleted_at.is_(None),
+            )
         )
         or 0
     )
@@ -156,3 +167,111 @@ async def get_job_stats(
         "jobs_today": today_count,
         "total_jobs": sum(status_counts.values()),
     }
+
+
+@router.get("/{job_id}")
+async def get_job(
+    job_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get a specific job by ID."""
+    result = await db.execute(
+        select(GenerationJob).where(
+            GenerationJob.id == job_id,
+            GenerationJob.deleted_at.is_(None),
+        )
+    )
+    job = result.scalar_one_or_none()
+
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    # Get prompt preview
+    prompt_preview = None
+    if job.prompt_id:
+        prompt_result = await db.execute(
+            select(Prompt).where(Prompt.id == job.prompt_id)
+        )
+        prompt = prompt_result.scalar_one_or_none()
+        if prompt and prompt.text:
+            prompt_preview = (
+                prompt.text[:80] + "..." if len(prompt.text) > 80 else prompt.text
+            )
+
+    # Get adapter name
+    adapter_name = None
+    if job.adapter_id:
+        adapter_result = await db.execute(
+            select(Adapter).where(Adapter.id == job.adapter_id)
+        )
+        adapter = adapter_result.scalar_one_or_none()
+        if adapter:
+            if adapter.deleted_at:
+                adapter_name = "Deleted Adapter"
+            else:
+                adapter_name = f"{adapter.name} v{adapter.version}"
+
+    # Calculate duration
+    duration_seconds = None
+    if job.completed_at and job.created_at:
+        duration_seconds = (job.completed_at - job.created_at).total_seconds()
+    elif job.status in [JobStatus.PROCESSING, JobStatus.QUEUED]:
+        duration_seconds = (datetime.utcnow() - job.created_at).total_seconds()
+
+    return {
+        "id": str(job.id),
+        "prompt_id": str(job.prompt_id) if job.prompt_id else None,
+        "prompt_preview": prompt_preview,
+        "adapter_id": str(job.adapter_id) if job.adapter_id else None,
+        "adapter_name": adapter_name,
+        "status": job.status.value,
+        "progress": job.progress,
+        "num_samples": job.num_samples,
+        "audio_ids": [str(aid) for aid in (job.audio_ids or [])],
+        "error": job.error,
+        "duration_seconds": duration_seconds,
+        "created_at": job.created_at.isoformat(),
+        "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+    }
+
+
+@router.delete("/{job_id}")
+async def delete_job(
+    job_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Delete a generation job (soft-delete).
+
+    If the job is queued or processing, it will be cancelled first.
+    All feedback associated with the job's audio samples will be deleted.
+    """
+    result = await db.execute(
+        select(GenerationJob).where(
+            GenerationJob.id == job_id,
+            GenerationJob.deleted_at.is_(None),
+        )
+    )
+    job = result.scalar_one_or_none()
+
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    # Cancel if still running
+    if job.status in [JobStatus.QUEUED, JobStatus.PROCESSING]:
+        job.status = JobStatus.CANCELLED
+        GenerationService.cancel_job(job_id)
+
+    # Delete associated feedback (cascade)
+    if job.audio_ids:
+        await db.execute(
+            delete(Feedback).where(Feedback.audio_id.in_(job.audio_ids))
+        )
+
+    # Soft-delete the job
+    job.deleted_at = datetime.utcnow()
+    job.completed_at = job.completed_at or datetime.utcnow()
+
+    await db.commit()
+
+    return {"status": "deleted", "job_id": str(job_id)}

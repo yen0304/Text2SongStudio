@@ -248,3 +248,25 @@ async def get_feedback_stats(
         win_rate=win_rate,
         common_tags=common_tags,
     )
+
+
+@router.delete("/{feedback_id}")
+async def delete_feedback(
+    feedback_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Delete a feedback record (hard-delete).
+
+    This permanently removes the feedback record from the database.
+    """
+    result = await db.execute(select(Feedback).where(Feedback.id == feedback_id))
+    feedback = result.scalar_one_or_none()
+
+    if not feedback:
+        raise HTTPException(status_code=404, detail="Feedback not found")
+
+    await db.delete(feedback)
+    await db.commit()
+
+    return {"status": "deleted", "feedback_id": str(feedback_id)}
