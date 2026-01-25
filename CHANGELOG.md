@@ -19,8 +19,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - PostgreSQL database integration
 - Audio storage with local and S3 support
 
-### Changed
-- N/A
+### Changed (2025-01-24 - Dashboard UI Redesign)
+- **BREAKING**: Complete UI redesign from music player to model tuning dashboard
+- New sidebar navigation with 8 sections: Overview, Generate, Jobs, Experiments, Adapters, A/B Tests, Datasets, Settings
+- New Pipeline visualization showing Generate → Feedback → Dataset → Training workflow
+- New Job Queue page with real-time status monitoring and filtering
+- New Experiment management with runs tracking and metrics visualization
+- New Adapter version history with timeline view
+- New A/B Testing comparison player with blind evaluation mode
+- New Metrics endpoints for dashboard statistics
+- Enhanced Adapter API with version management
+- Audio player now embedded in Job/Run detail pages instead of dedicated page
+- Route changes: `/` → `/overview`, original homepage → `/generate`, `/training` → `/datasets`
 
 ### Deprecated
 - N/A

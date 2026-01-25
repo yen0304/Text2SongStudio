@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.png" alt="Text2Song Studio Logo" width="480" />
+</p>
+
 # Text2Song Studio
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -118,7 +122,7 @@ flowchart LR
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/your-org/text2song-studio.git
+git clone https://github.com/yen0304/Text2SongStudio.git
 cd text2song-studio
 ```
 
