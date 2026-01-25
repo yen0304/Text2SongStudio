@@ -4,11 +4,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { api, type AudioSample } from '@/lib/api';
-import { Play, Pause, SkipBack, SkipForward } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, Check, Volume2 } from 'lucide-react';
 
 interface AudioPlayerProps {
   audioIds: string[];
 }
+
+const SAMPLE_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
 export function AudioPlayer({ audioIds }: AudioPlayerProps) {
   const [samples, setSamples] = useState<AudioSample[]>([]);
@@ -16,7 +18,7 @@ export function AudioPlayer({ audioIds }: AudioPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const [playedSamples, setPlayedSamples] = useState<Set<number>>(new Set());
   const waveformRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<any>(null);
 
@@ -29,13 +31,16 @@ export function AudioPlayer({ audioIds }: AudioPlayerProps) {
   useEffect(() => {
     if (typeof window === 'undefined' || !waveformRef.current || audioIds.length === 0) return;
 
-    let wavesurfer: any = null;
+    let ws: any = null;
+    let destroyed = false;
 
     const initWaveSurfer = async () => {
       const WaveSurfer = (await import('wavesurfer.js')).default;
 
-      wavesurfer = WaveSurfer.create({
-        container: waveformRef.current!,
+      if (destroyed || !waveformRef.current) return;
+
+      ws = WaveSurfer.create({
+        container: waveformRef.current,
         waveColor: 'hsl(262.1, 83.3%, 57.8%)',
         progressColor: 'hsl(262.1, 83.3%, 40%)',
         cursorColor: 'hsl(262.1, 83.3%, 30%)',
@@ -46,38 +51,48 @@ export function AudioPlayer({ audioIds }: AudioPlayerProps) {
         normalize: true,
       });
 
-      wavesurfer.on('ready', () => {
-        setDuration(wavesurfer.getDuration());
+      ws.on('ready', () => {
+        if (!destroyed) setDuration(ws.getDuration());
       });
 
-      wavesurfer.on('audioprocess', () => {
-        setCurrentTime(wavesurfer.getCurrentTime());
+      ws.on('audioprocess', () => {
+        if (!destroyed) setCurrentTime(ws.getCurrentTime());
       });
 
-      wavesurfer.on('play', () => setIsPlaying(true));
-      wavesurfer.on('pause', () => setIsPlaying(false));
-      wavesurfer.on('finish', () => {
-        setIsPlaying(false);
-        if (currentIndex < audioIds.length - 1) {
-          setCurrentIndex((prev) => prev + 1);
+      ws.on('play', () => {
+        if (!destroyed) setIsPlaying(true);
+      });
+      ws.on('pause', () => {
+        if (!destroyed) setIsPlaying(false);
+      });
+      ws.on('finish', () => {
+        if (!destroyed) {
+          setIsPlaying(false);
+          setCurrentIndex((prev) => (prev < audioIds.length - 1 ? prev + 1 : prev));
         }
       });
 
-      wavesurferRef.current = wavesurfer;
+      wavesurferRef.current = ws;
 
-      if (audioIds[currentIndex]) {
-        wavesurfer.load(api.getAudioStreamUrl(audioIds[currentIndex]));
+      if (audioIds[0]) {
+        ws.load(api.getAudioStreamUrl(audioIds[0]));
       }
     };
 
     initWaveSurfer();
 
     return () => {
-      if (wavesurfer) {
-        wavesurfer.destroy();
+      destroyed = true;
+      if (ws) {
+        try {
+          ws.destroy();
+        } catch (e) {
+          // Ignore
+        }
       }
+      wavesurferRef.current = null;
     };
-  }, []);
+  }, [audioIds]);
 
   useEffect(() => {
     if (wavesurferRef.current && audioIds[currentIndex]) {
@@ -88,6 +103,7 @@ export function AudioPlayer({ audioIds }: AudioPlayerProps) {
   const togglePlayPause = () => {
     if (wavesurferRef.current) {
       wavesurferRef.current.playPause();
+      setPlayedSamples((prev) => new Set([...prev, currentIndex]));
     }
   };
 
@@ -117,9 +133,41 @@ export function AudioPlayer({ audioIds }: AudioPlayerProps) {
         <CardTitle>Audio Player</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Sample Tabs */}
+        {audioIds.length > 1 && (
+          <div className="flex gap-1 p-1 bg-muted rounded-lg">
+            {audioIds.map((_, index) => {
+              const isActive = index === currentIndex;
+              const isPlayed = playedSamples.has(index);
+              return (
+                <button
+                  key={index}
+                  onClick={() => setCurrentIndex(index)}
+                  className={`
+                    flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-all
+                    ${isActive
+                      ? 'bg-background shadow-sm text-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                    }
+                  `}
+                >
+                  <span>Sample {SAMPLE_LABELS[index]}</span>
+                  {isActive && isPlaying && (
+                    <Volume2 className="h-3 w-3 text-primary animate-pulse" />
+                  )}
+                  {!isActive && isPlayed && (
+                    <Check className="h-3 w-3 text-green-500" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Sample Info */}
         <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span>
-            Sample {currentIndex + 1} of {audioIds.length}
+          <span className="font-medium text-foreground">
+            Sample {SAMPLE_LABELS[currentIndex]}
           </span>
           {currentSample && (
             <span>
@@ -128,13 +176,16 @@ export function AudioPlayer({ audioIds }: AudioPlayerProps) {
           )}
         </div>
 
-        <div ref={waveformRef} className="w-full rounded-md overflow-hidden bg-muted" />
+        {/* Waveform */}
+        <div ref={waveformRef} className="w-full h-20 rounded-md overflow-hidden bg-muted" />
 
+        {/* Time Display */}
         <div className="flex items-center justify-between text-sm">
           <span>{formatTime(currentTime)}</span>
           <span>{formatTime(duration)}</span>
         </div>
 
+        {/* Playback Controls */}
         <div className="flex items-center justify-center gap-4">
           <Button
             variant="ghost"
@@ -159,18 +210,23 @@ export function AudioPlayer({ audioIds }: AudioPlayerProps) {
           </Button>
         </div>
 
+        {/* Progress Hint */}
         {audioIds.length > 1 && (
-          <div className="flex gap-2 justify-center">
-            {audioIds.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentIndex(index)}
-                className={`w-3 h-3 rounded-full transition-colors ${
-                  index === currentIndex ? 'bg-primary' : 'bg-muted hover:bg-muted-foreground'
-                }`}
-              />
-            ))}
-          </div>
+          <p className="text-xs text-center text-muted-foreground">
+            {playedSamples.size === 0 && 'Click play to listen to each sample'}
+            {playedSamples.size > 0 && playedSamples.size < audioIds.length && (
+              <>
+                <Check className="inline h-3 w-3 text-green-500 mr-1" />
+                {playedSamples.size} of {audioIds.length} samples played
+              </>
+            )}
+            {playedSamples.size === audioIds.length && (
+              <>
+                <Check className="inline h-3 w-3 text-green-500 mr-1" />
+                All samples played
+              </>
+            )}
+          </p>
         )}
       </CardContent>
     </Card>

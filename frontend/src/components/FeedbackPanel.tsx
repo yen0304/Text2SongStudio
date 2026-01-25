@@ -33,6 +33,8 @@ const SUGGESTED_TAGS = [
   'artifacts',
 ];
 
+const SAMPLE_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
 export function FeedbackPanel({ audioIds }: FeedbackPanelProps) {
   const [activeTab, setActiveTab] = useState<'rating' | 'preference' | 'tags'>('rating');
   const [selectedAudioId, setSelectedAudioId] = useState<string>(audioIds[0] || '');
@@ -148,16 +150,21 @@ export function FeedbackPanel({ audioIds }: FeedbackPanelProps) {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">Select Sample</label>
-              <div className="flex gap-2">
+              <div className="flex gap-1 p-1 bg-muted rounded-lg">
                 {audioIds.map((id, index) => (
-                  <Button
+                  <button
                     key={id}
-                    variant={selectedAudioId === id ? 'default' : 'outline'}
-                    size="sm"
                     onClick={() => setSelectedAudioId(id)}
+                    className={`
+                      flex-1 px-3 py-2 rounded-md text-sm font-medium transition-all
+                      ${selectedAudioId === id
+                        ? 'bg-background shadow-sm text-foreground'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                      }
+                    `}
                   >
-                    Sample {index + 1}
-                  </Button>
+                    Sample {SAMPLE_LABELS[index]}
+                  </button>
                 ))}
               </div>
             </div>
@@ -176,27 +183,40 @@ export function FeedbackPanel({ audioIds }: FeedbackPanelProps) {
             <p className="text-sm text-muted-foreground">
               Which sample do you prefer?
             </p>
-            <div className="flex gap-4">
+            <div className="grid grid-cols-2 gap-3">
               {audioIds.slice(0, 2).map((id, index) => (
-                <Button
+                <button
                   key={id}
-                  variant={preferredId === id ? 'default' : 'outline'}
-                  className="flex-1"
                   onClick={() => setPreferredId(id)}
+                  className={`
+                    p-4 rounded-lg border-2 text-center transition-all
+                    ${preferredId === id
+                      ? 'border-primary bg-primary/10 text-foreground'
+                      : 'border-border hover:border-primary/50 text-muted-foreground hover:text-foreground'
+                    }
+                  `}
                 >
-                  Sample {index + 1}
-                  {preferredId === id && ' (Preferred)'}
-                </Button>
+                  <span className="text-2xl font-bold block mb-1">
+                    {SAMPLE_LABELS[index]}
+                  </span>
+                  <span className="text-sm">
+                    {preferredId === id ? 'Preferred' : 'Sample ' + SAMPLE_LABELS[index]}
+                  </span>
+                </button>
               ))}
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
               onClick={() => setPreferredId(null)}
-              className="w-full"
+              className={`
+                w-full p-2 rounded-md text-sm transition-all
+                ${preferredId === null
+                  ? 'bg-muted text-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                }
+              `}
             >
               No preference (tie)
-            </Button>
+            </button>
           </div>
         )}
 
@@ -204,16 +224,21 @@ export function FeedbackPanel({ audioIds }: FeedbackPanelProps) {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">Select Sample</label>
-              <div className="flex gap-2">
+              <div className="flex gap-1 p-1 bg-muted rounded-lg">
                 {audioIds.map((id, index) => (
-                  <Button
+                  <button
                     key={id}
-                    variant={selectedAudioId === id ? 'default' : 'outline'}
-                    size="sm"
                     onClick={() => setSelectedAudioId(id)}
+                    className={`
+                      flex-1 px-3 py-2 rounded-md text-sm font-medium transition-all
+                      ${selectedAudioId === id
+                        ? 'bg-background shadow-sm text-foreground'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                      }
+                    `}
                   >
-                    Sample {index + 1}
-                  </Button>
+                    Sample {SAMPLE_LABELS[index]}
+                  </button>
                 ))}
               </div>
             </div>

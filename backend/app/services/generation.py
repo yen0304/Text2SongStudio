@@ -188,8 +188,12 @@ class GenerationService:
                         prompt_text = f"{attrs['style']} music: {prompt_text}"
                     if attrs.get("mood"):
                         prompt_text = f"{attrs['mood']} {prompt_text}"
-                    if attrs.get("instrumentation"):
-                        prompt_text = f"{prompt_text} with {', '.join(attrs['instrumentation'])}"
+                    primary = attrs.get("primary_instruments")
+                    secondary = attrs.get("secondary_instruments")
+                    if primary:
+                        prompt_text = f"{prompt_text} featuring {', '.join(primary)}"
+                    if secondary:
+                        prompt_text = f"{prompt_text} with subtle {', '.join(secondary)}"
 
                 # Load adapter if specified
                 await cls.load_adapter(job.adapter_id, db)
