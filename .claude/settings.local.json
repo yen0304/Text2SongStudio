@@ -10,7 +10,11 @@
       "Bash(docker exec:*)",
       "Bash(uv add:*)",
       "Bash(openspec list:*)",
-      "Bash(openspec validate:*)"
+      "Bash(openspec validate:*)",
+      "Bash(openspec show:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(python -m py_compile:*)",
+      "Bash(alembic upgrade:*)"
     ]
   },
   "enabledPlugins": {
