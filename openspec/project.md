@@ -16,6 +16,7 @@ Text2Song Studio is an open-source, human-in-the-loop text-to-music generation p
 - SQLAlchemy (ORM)
 - PyTorch (ML framework)
 - torchaudio, librosa (audio processing)
+- uv (Python package and project manager)
 
 ### Model & Training
 - MusicGen (Meta's text-to-music model)
