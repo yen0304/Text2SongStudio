@@ -1,12 +1,13 @@
-import asyncio
-import uuid
 import io
+import uuid
 from datetime import datetime
 from uuid import UUID
+
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from app.config import get_settings
-from app.models import GenerationJob, JobStatus, AudioSample, Prompt, Adapter
+from app.models import Adapter, AudioSample, GenerationJob, JobStatus, Prompt
 from app.services.storage import StorageService
 
 settings = get_settings()
@@ -47,6 +48,7 @@ class GenerationService:
 
             # Move to GPU if available
             import torch
+
             if torch.cuda.is_available():
                 cls._model = cls._model.to("cuda")
         except Exception as e:
@@ -65,6 +67,7 @@ class GenerationService:
         if cls._current_adapter_id is not None:
             try:
                 from peft import PeftModel
+
                 if isinstance(cls._model, PeftModel):
                     cls._model = cls._model.unload()
             except Exception:
@@ -84,6 +87,7 @@ class GenerationService:
 
         try:
             from peft import PeftModel
+
             cls._model = PeftModel.from_pretrained(
                 cls._model,
                 adapter.storage_path,
@@ -103,9 +107,8 @@ class GenerationService:
         top_k: int = 250,
         top_p: float = 0.0,
     ) -> tuple[bytes, float, int]:
-        import torch
         import soundfile as sf
-        import numpy as np
+        import torch
 
         if cls._model is None:
             await cls.load_model()
@@ -155,12 +158,16 @@ class GenerationService:
     async def process_job(cls, job_id: UUID):
         # Create new database session for background task
         engine = create_async_engine(settings.database_url)
-        async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+        async_session = async_sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
 
         async with async_session() as db:
             try:
                 # Get job
-                result = await db.execute(select(GenerationJob).where(GenerationJob.id == job_id))
+                result = await db.execute(
+                    select(GenerationJob).where(GenerationJob.id == job_id)
+                )
                 job = result.scalar_one_or_none()
 
                 if not job or cls.is_cancelled(job_id):
@@ -171,7 +178,9 @@ class GenerationService:
                 await db.commit()
 
                 # Get prompt
-                result = await db.execute(select(Prompt).where(Prompt.id == job.prompt_id))
+                result = await db.execute(
+                    select(Prompt).where(Prompt.id == job.prompt_id)
+                )
                 prompt = result.scalar_one_or_none()
 
                 if not prompt:
@@ -193,7 +202,9 @@ class GenerationService:
                     if primary:
                         prompt_text = f"{prompt_text} featuring {', '.join(primary)}"
                     if secondary:
-                        prompt_text = f"{prompt_text} with subtle {', '.join(secondary)}"
+                        prompt_text = (
+                            f"{prompt_text} with subtle {', '.join(secondary)}"
+                        )
 
                 # Load adapter if specified
                 await cls.load_adapter(job.adapter_id, db)

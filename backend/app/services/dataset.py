@@ -1,14 +1,13 @@
 import json
 import os
-from pathlib import Path
-from uuid import UUID
-from datetime import datetime
-from sqlalchemy import select, func, and_
+
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.models import Dataset, DatasetType, Feedback, AudioSample, Prompt
+
+from app.config import get_settings
+from app.models import AudioSample, Dataset, DatasetType, Feedback, Prompt
 from app.schemas import DatasetFilterQuery
 from app.services.storage import StorageService
-from app.config import get_settings
 
 settings = get_settings()
 
@@ -95,16 +94,6 @@ class DatasetService:
     ):
         conditions = self._build_filter_query(filter_query)
 
-        # Get chosen samples
-        chosen_sample = select(AudioSample).where(
-            AudioSample.id == Feedback.audio_id
-        ).correlate(Feedback).scalar_subquery()
-
-        # Get rejected samples
-        rejected_sample = select(AudioSample).where(
-            AudioSample.id == Feedback.preferred_over
-        ).correlate(Feedback).scalar_subquery()
-
         query = (
             select(
                 Feedback,
@@ -137,13 +126,17 @@ class DatasetService:
         os.makedirs(output_dir, exist_ok=True)
 
         if dataset.type == DatasetType.SUPERVISED:
-            return await self._export_supervised(dataset, filter_query, output_dir, format)
+            return await self._export_supervised(
+                dataset, filter_query, output_dir, format
+            )
         else:
-            return await self._export_preference(dataset, filter_query, output_dir, format)
+            return await self._export_preference(
+                dataset, filter_query, output_dir, format
+            )
 
     async def _export_supervised(
         self,
-        dataset: Dataset,
+        _dataset: Dataset,
         filter_query: DatasetFilterQuery | None,
         output_dir: str,
         format: str,
@@ -153,16 +146,20 @@ class DatasetService:
         if format == "json":
             data = []
             for feedback, audio, prompt in samples:
-                data.append({
-                    "prompt_id": str(audio.prompt_id),
-                    "prompt_text": prompt.text,
-                    "prompt_attributes": prompt.attributes,
-                    "audio_id": str(audio.id),
-                    "audio_path": audio.storage_path,
-                    "rating": feedback.rating,
-                    "tags": feedback.tags,
-                    "adapter_id": str(audio.adapter_id) if audio.adapter_id else None,
-                })
+                data.append(
+                    {
+                        "prompt_id": str(audio.prompt_id),
+                        "prompt_text": prompt.text,
+                        "prompt_attributes": prompt.attributes,
+                        "audio_id": str(audio.id),
+                        "audio_path": audio.storage_path,
+                        "rating": feedback.rating,
+                        "tags": feedback.tags,
+                        "adapter_id": str(audio.adapter_id)
+                        if audio.adapter_id
+                        else None,
+                    }
+                )
 
             output_file = os.path.join(output_dir, "dataset.json")
             with open(output_file, "w") as f:
@@ -198,10 +195,10 @@ class DatasetService:
 
     async def _export_preference(
         self,
-        dataset: Dataset,
+        _dataset: Dataset,
         filter_query: DatasetFilterQuery | None,
         output_dir: str,
-        format: str,
+        _format: str,
     ) -> str:
         conditions = self._build_filter_query(filter_query)
 
@@ -230,13 +227,15 @@ class DatasetService:
         for feedback, chosen_audio, prompt in feedbacks:
             rejected_audio = rejected_map.get(feedback.preferred_over)
             if rejected_audio:
-                data.append({
-                    "prompt": prompt.text,
-                    "chosen_path": chosen_audio.storage_path,
-                    "rejected_path": rejected_audio.storage_path,
-                    "chosen_id": str(chosen_audio.id),
-                    "rejected_id": str(rejected_audio.id),
-                })
+                data.append(
+                    {
+                        "prompt": prompt.text,
+                        "chosen_path": chosen_audio.storage_path,
+                        "rejected_path": rejected_audio.storage_path,
+                        "chosen_id": str(chosen_audio.id),
+                        "rejected_id": str(rejected_audio.id),
+                    }
+                )
 
         output_file = os.path.join(output_dir, "preferences.jsonl")
         with open(output_file, "w") as f:
@@ -266,9 +265,8 @@ class DatasetService:
         rating_distribution = {str(r): c for r, c in rating_result.all()}
 
         # Unique prompts
-        prompt_query = (
-            select(func.count(func.distinct(AudioSample.prompt_id)))
-            .join(Feedback, Feedback.audio_id == AudioSample.id)
+        prompt_query = select(func.count(func.distinct(AudioSample.prompt_id))).join(
+            Feedback, Feedback.audio_id == AudioSample.id
         )
         if conditions:
             prompt_query = prompt_query.where(and_(*conditions))

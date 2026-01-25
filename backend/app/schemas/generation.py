@@ -1,5 +1,6 @@
 from datetime import datetime
 from uuid import UUID
+
 from pydantic import BaseModel, Field
 
 
@@ -24,3 +25,40 @@ class GenerationJobResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Job Feedback Schemas
+class SampleFeedbackItem(BaseModel):
+    """Individual feedback record for a sample."""
+
+    id: UUID
+    rating: float | None
+    rating_criterion: str | None
+    preferred_over: UUID | None
+    tags: list[str] | None
+    notes: str | None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SampleFeedbackGroup(BaseModel):
+    """Feedback grouped by audio sample."""
+
+    audio_id: UUID
+    label: str  # A, B, C, D...
+    feedback: list[SampleFeedbackItem]
+    average_rating: float | None = None
+    feedback_count: int = 0
+
+
+class JobFeedbackResponse(BaseModel):
+    """Response for GET /generate/{job_id}/feedback."""
+
+    job_id: UUID
+    prompt_id: UUID
+    total_samples: int
+    total_feedback: int
+    average_rating: float | None
+    samples: list[SampleFeedbackGroup]

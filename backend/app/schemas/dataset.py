@@ -1,6 +1,8 @@
 from datetime import datetime
 from uuid import UUID
+
 from pydantic import BaseModel, Field
+
 from app.models.dataset import DatasetType
 
 
@@ -34,6 +36,20 @@ class DatasetResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class DatasetListResponse(BaseModel):
+    items: list[DatasetResponse]
+    total: int
+
+
+class DatasetPreviewRequest(BaseModel):
+    type: DatasetType
+    filter_query: DatasetFilterQuery | None = None
+
+
+class DatasetPreviewResponse(BaseModel):
+    count: int
 
 
 class DatasetExportRequest(BaseModel):

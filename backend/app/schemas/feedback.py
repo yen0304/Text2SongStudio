@@ -1,5 +1,6 @@
 from datetime import datetime
 from uuid import UUID
+
 from pydantic import BaseModel, Field, model_validator
 
 
@@ -47,3 +48,11 @@ class FeedbackStatsResponse(BaseModel):
     preference_losses: int
     win_rate: float | None
     common_tags: list[dict]
+
+
+class FeedbackSummaryResponse(BaseModel):
+    total_feedback: int
+    total_ratings: int
+    total_preferences: int
+    rating_distribution: dict[str, int]
+    high_rated_samples: int

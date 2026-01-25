@@ -1,6 +1,6 @@
-import io
 import boto3
 from botocore.exceptions import ClientError
+
 from app.config import get_settings
 
 settings = get_settings()
