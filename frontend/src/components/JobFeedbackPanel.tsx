@@ -98,7 +98,7 @@ function SampleFeedbackCard({ sample, allAudioIds }: { sample: SampleFeedbackGro
               {fb.notes && (
                 <div className="flex items-start gap-2 text-sm">
                   <MessageSquare className="h-3.5 w-3.5 mt-0.5 text-muted-foreground" />
-                  <p className="text-muted-foreground italic">"{fb.notes}"</p>
+                  <p className="text-muted-foreground italic">&quot;{fb.notes}&quot;</p>
                 </div>
               )}
 

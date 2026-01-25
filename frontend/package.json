@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+    "test": "echo \"No tests configured yet\" && exit 0"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.0",

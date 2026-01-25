@@ -198,7 +198,7 @@ function FeedbackRow({ feedback }: { feedback: Feedback }) {
         {feedback.notes && (
           <div className="flex items-start gap-1.5 text-sm text-muted-foreground">
             <MessageSquare className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-            <span className="italic">"{feedback.notes}"</span>
+            <span className="italic">&quot;{feedback.notes}&quot;</span>
           </div>
         )}
       </div>

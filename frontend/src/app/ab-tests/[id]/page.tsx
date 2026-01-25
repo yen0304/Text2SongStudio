@@ -261,7 +261,7 @@ export default function ABTestDetailPage() {
                   <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-4" />
                   <h3 className="font-medium mb-2">All comparisons complete!</h3>
                   <p className="text-sm text-muted-foreground">
-                    You've voted on all available pairs
+                    You&apos;ve voted on all available pairs
                   </p>
                 </div>
               )}
