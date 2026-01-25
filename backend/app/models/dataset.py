@@ -26,6 +26,7 @@ class Dataset(Base):
     sample_count = Column(Integer, default=0, nullable=False)
     export_path = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    deleted_at = Column(DateTime, nullable=True, index=True)
 
     # Relationships
     trained_adapters = relationship(

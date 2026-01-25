@@ -33,6 +33,7 @@ class DatasetResponse(BaseModel):
     sample_count: int
     export_path: str | None
     created_at: datetime
+    deleted_at: datetime | None = None
 
     class Config:
         from_attributes = True

@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
@@ -5,7 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Dataset
+from app.models import Adapter, Dataset, Experiment, ExperimentStatus
 from app.schemas import (
     DatasetCreate,
     DatasetExportRequest,
@@ -25,13 +26,20 @@ router = APIRouter(prefix="/datasets", tags=["datasets"])
 async def list_datasets(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
+    include_deleted: bool = Query(False, description="Include soft-deleted datasets"),
     db: AsyncSession = Depends(get_db),
 ):
-    query = select(Dataset).order_by(Dataset.created_at.desc())
+    query = select(Dataset)
+
+    # Exclude soft-deleted by default
+    if not include_deleted:
+        query = query.where(Dataset.deleted_at.is_(None))
+
+    query = query.order_by(Dataset.created_at.desc())
 
     # Count
-    count_result = await db.execute(select(func.count()).select_from(Dataset))
-    total = count_result.scalar()
+    count_query = select(func.count()).select_from(query.subquery())
+    total = await db.scalar(count_query) or 0
 
     # Paginate
     offset = (page - 1) * limit
@@ -51,6 +59,7 @@ async def list_datasets(
                 sample_count=d.sample_count,
                 export_path=d.export_path,
                 created_at=d.created_at,
+                deleted_at=d.deleted_at,
             )
             for d in datasets
         ],
@@ -113,7 +122,12 @@ async def get_dataset(
     dataset_id: UUID,
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Dataset).where(Dataset.id == dataset_id))
+    result = await db.execute(
+        select(Dataset).where(
+            Dataset.id == dataset_id,
+            Dataset.deleted_at.is_(None),
+        )
+    )
     dataset = result.scalar_one_or_none()
 
     if not dataset:
@@ -189,3 +203,59 @@ async def get_dataset_stats(
         inter_rater_agreement=stats.get("inter_rater_agreement"),
         preference_consistency=stats.get("preference_consistency"),
     )
+
+
+@router.delete("/{dataset_id}", status_code=204)
+async def delete_dataset(
+    dataset_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Soft delete a dataset.
+
+    Only succeeds if no active Adapters or Experiments reference this dataset.
+    Active means: Adapter.deleted_at IS NULL or Experiment.status != ARCHIVED
+    """
+    result = await db.execute(
+        select(Dataset).where(
+            Dataset.id == dataset_id,
+            Dataset.deleted_at.is_(None),
+        )
+    )
+    dataset = result.scalar_one_or_none()
+
+    if not dataset:
+        raise HTTPException(status_code=404, detail="Dataset not found")
+
+    # Check for active Adapters referencing this dataset
+    active_adapters_query = select(Adapter).where(
+        Adapter.training_dataset_id == dataset_id,
+        Adapter.deleted_at.is_(None),
+    )
+    active_adapters_result = await db.execute(active_adapters_query)
+    active_adapters = active_adapters_result.scalars().all()
+
+    if active_adapters:
+        adapter_names = [a.name for a in active_adapters[:5]]
+        detail = f"Cannot delete dataset: referenced by {len(active_adapters)} active adapter(s): {', '.join(adapter_names)}"
+        if len(active_adapters) > 5:
+            detail += f" and {len(active_adapters) - 5} more"
+        raise HTTPException(status_code=400, detail=detail)
+
+    # Check for active Experiments referencing this dataset
+    active_experiments_query = select(Experiment).where(
+        Experiment.dataset_id == dataset_id,
+        Experiment.status != ExperimentStatus.ARCHIVED,
+    )
+    active_experiments_result = await db.execute(active_experiments_query)
+    active_experiments = active_experiments_result.scalars().all()
+
+    if active_experiments:
+        experiment_names = [e.name for e in active_experiments[:5]]
+        detail = f"Cannot delete dataset: referenced by {len(active_experiments)} active experiment(s): {', '.join(experiment_names)}"
+        if len(active_experiments) > 5:
+            detail += f" and {len(active_experiments) - 5} more"
+        raise HTTPException(status_code=400, detail=detail)
+
+    # Soft delete
+    dataset.deleted_at = datetime.utcnow()
+    await db.commit()
