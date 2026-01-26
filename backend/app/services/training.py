@@ -1,6 +1,8 @@
 import asyncio
 import json
+import os
 from datetime import datetime
+from pathlib import Path
 from uuid import UUID
 
 from sqlalchemy import select
@@ -8,14 +10,21 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.config import get_settings
 from app.models import (
+    Adapter,
+    Dataset,
+    DatasetType,
     Experiment,
     ExperimentRun,
     ExperimentStatus,
     RunStatus,
 )
+from app.services.dataset import DatasetService
 from app.services.log_capture import LogCaptureService
 
 settings = get_settings()
+
+# Project root for PYTHONPATH (backend is at project_root/backend)
+PROJECT_ROOT = Path(__file__).parents[3]
 
 
 class TrainingService:
@@ -25,7 +34,7 @@ class TrainingService:
     async def start_training(run_id: UUID):
         """Start a training run in the background.
 
-        This method spawns a subprocess to run the training script and
+        This method spawns a subprocess to run the real training script and
         captures its output to the database for streaming to the frontend.
         """
         # Create new database session for background task
@@ -33,6 +42,11 @@ class TrainingService:
         async_session = async_sessionmaker(
             engine, class_=AsyncSession, expire_on_commit=False
         )
+
+        experiment = None
+        run = None
+        dataset = None
+        dataset_path = None
 
         try:
             async with async_session() as db:
@@ -53,6 +67,27 @@ class TrainingService:
                 if not experiment:
                     return
 
+                # Validate dataset exists
+                if not experiment.dataset_id:
+                    run.status = RunStatus.FAILED
+                    run.error = "Dataset required for training. Please link a dataset to this experiment."
+                    run.completed_at = datetime.utcnow()
+                    await db.commit()
+                    return
+
+                # Get dataset
+                result = await db.execute(
+                    select(Dataset).where(Dataset.id == experiment.dataset_id)
+                )
+                dataset = result.scalar_one_or_none()
+
+                if not dataset:
+                    run.status = RunStatus.FAILED
+                    run.error = f"Dataset {experiment.dataset_id} not found"
+                    run.completed_at = datetime.utcnow()
+                    await db.commit()
+                    return
+
                 # Update run status to running
                 run.status = RunStatus.RUNNING
                 run.started_at = datetime.utcnow()
@@ -61,20 +96,45 @@ class TrainingService:
                 # Create training log entry
                 await LogCaptureService.create_log(run_id, db)
 
+                # Export dataset for training
+                try:
+                    dataset_service = DatasetService(db)
+                    dataset_path = await dataset_service.export_dataset(
+                        dataset=dataset,
+                        format="huggingface",
+                        output_path=f"./exports/{dataset.id}",
+                    )
+                except Exception as e:
+                    run.status = RunStatus.FAILED
+                    run.error = f"Dataset export failed: {str(e)}"
+                    run.completed_at = datetime.utcnow()
+                    await db.commit()
+                    return
+
             # Build training command
             config = run.config or {}
+            output_dir = f"./adapters/{experiment.id}/{run.id}"
+            adapter_name = f"{experiment.name}-{run.name}"
+
             cmd = TrainingService._build_training_command(
-                experiment_id=experiment.id,
-                run_id=run_id,
-                dataset_id=experiment.dataset_id,
+                dataset_path=dataset_path,
+                dataset_type=dataset.type,
+                output_dir=output_dir,
+                adapter_name=adapter_name,
                 config=config,
             )
+
+            # Set environment with PYTHONPATH to find model.training module
+            env = os.environ.copy()
+            env["PYTHONPATH"] = str(PROJECT_ROOT)
 
             # Start subprocess with pipe for stdout/stderr
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,  # Merge stderr into stdout
+                env=env,
+                cwd=str(PROJECT_ROOT),  # Run from project root
             )
 
             # Capture output
@@ -96,7 +156,23 @@ class TrainingService:
 
                     if exit_code == 0:
                         run.status = RunStatus.COMPLETED
-                        # TODO: Parse final metrics from log or config
+
+                        # Register adapter after successful training
+                        (
+                            adapter_id,
+                            final_loss,
+                        ) = await TrainingService._register_adapter(
+                            db=db,
+                            output_dir=output_dir,
+                            adapter_name=adapter_name,
+                            experiment=experiment,
+                            dataset=dataset,
+                        )
+
+                        if adapter_id:
+                            run.adapter_id = adapter_id
+                        if final_loss is not None:
+                            run.final_loss = final_loss
                     else:
                         run.status = RunStatus.FAILED
                         run.error = f"Training process exited with code {exit_code}"
@@ -127,33 +203,110 @@ class TrainingService:
 
     @staticmethod
     def _build_training_command(
-        experiment_id: UUID,
-        run_id: UUID,
-        dataset_id: UUID | None,
+        dataset_path: str,
+        dataset_type: DatasetType,
+        output_dir: str,
+        adapter_name: str,
         config: dict,
     ) -> list[str]:
-        """Build the command to run training."""
-        # This is a placeholder - the actual training script would be customized
-        # for the specific ML framework being used
+        """Build the command to run real training via model.training.cli."""
+        # Determine dataset file based on type
+        if dataset_type == DatasetType.SUPERVISED:
+            dataset_file = os.path.join(dataset_path, "train.jsonl")
+            training_type = "supervised"
+        else:
+            dataset_file = os.path.join(dataset_path, "preferences.jsonl")
+            training_type = "preference"
+
         cmd = [
             "python",
             "-m",
-            "app.training.cli",
+            "model.training.cli",
             "train",
-            "--experiment-id",
-            str(experiment_id),
-            "--run-id",
-            str(run_id),
+            "--dataset",
+            dataset_file,
+            "--type",
+            training_type,
+            "--output",
+            output_dir,
+            "--name",
+            adapter_name,
         ]
 
-        if dataset_id:
-            cmd.extend(["--dataset-id", str(dataset_id)])
+        # Map experiment config to CLI arguments
+        if config.get("epochs"):
+            cmd.extend(["--epochs", str(config["epochs"])])
+        if config.get("batch_size"):
+            cmd.extend(["--batch-size", str(config["batch_size"])])
+        if config.get("learning_rate"):
+            cmd.extend(["--lr", str(config["learning_rate"])])
+        if config.get("lora_r"):
+            cmd.extend(["--lora-r", str(config["lora_r"])])
+        if config.get("lora_alpha"):
+            cmd.extend(["--lora-alpha", str(config["lora_alpha"])])
+        if config.get("base_model"):
+            cmd.extend(["--base-model", str(config["base_model"])])
+        if config.get("dpo_beta"):
+            cmd.extend(["--beta", str(config["dpo_beta"])])
 
-        # Add config as JSON
-        if config:
-            cmd.extend(["--config", json.dumps(config)])
+        # Generate version from timestamp
+        version = datetime.utcnow().strftime("%Y.%m.%d.%H%M")
+        cmd.extend(["--version", version])
 
         return cmd
+
+    @staticmethod
+    async def _register_adapter(
+        db: AsyncSession,
+        output_dir: str,
+        adapter_name: str,
+        experiment: Experiment,
+        dataset: Dataset,
+    ) -> tuple[UUID | None, float | None]:
+        """Register the trained adapter in the database.
+
+        Returns (adapter_id, final_loss) tuple.
+        """
+        final_path = os.path.join(output_dir, "final")
+        config_path = os.path.join(output_dir, "training_config.json")
+
+        # Check if training output exists
+        if not os.path.exists(final_path):
+            return None, None
+
+        # Load training config if available
+        training_config = {}
+        final_loss = None
+        if os.path.exists(config_path):
+            try:
+                with open(config_path) as f:
+                    training_config = json.load(f)
+                # Try to get final loss from config or metrics
+                final_loss = training_config.get("final_loss")
+            except Exception:
+                pass
+
+        # Generate version
+        version = datetime.utcnow().strftime("%Y.%m.%d.%H%M")
+
+        # Create adapter record
+        adapter = Adapter(
+            name=adapter_name,
+            version=version,
+            description=f"Trained from experiment '{experiment.name}'",
+            base_model=training_config.get("base_model", "facebook/musicgen-small"),
+            storage_path=os.path.abspath(final_path),
+            training_dataset_id=dataset.id,
+            training_config=training_config,
+            is_active=True,
+            status="active",
+        )
+
+        db.add(adapter)
+        await db.commit()
+        await db.refresh(adapter)
+
+        return adapter.id, final_loss
 
     @staticmethod
     async def _update_experiment_status(experiment_id: UUID, db: AsyncSession) -> None:
