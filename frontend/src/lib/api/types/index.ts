@@ -15,3 +15,4 @@ export * from './datasets';
 export * from './experiments';
 export * from './ab-tests';
 export * from './metrics';
+export * from './logs';

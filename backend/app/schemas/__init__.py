@@ -60,6 +60,11 @@ from app.schemas.prompt import (
     PromptListResponse,
     PromptResponse,
 )
+from app.schemas.training_log import (
+    TrainingLogChunk,
+    TrainingLogDone,
+    TrainingLogResponse,
+)
 
 __all__ = [
     "PromptCreate",
@@ -107,4 +112,7 @@ __all__ = [
     "ABTestDetailResponse",
     "ABTestResultsResponse",
     "ABTestListResponse",
+    "TrainingLogResponse",
+    "TrainingLogChunk",
+    "TrainingLogDone",
 ]

@@ -17,6 +17,9 @@ AsyncSessionLocal = async_sessionmaker(
     expire_on_commit=False,
 )
 
+# Alias for use in background tasks and streaming
+async_session_factory = AsyncSessionLocal
+
 Base = declarative_base()
 
 

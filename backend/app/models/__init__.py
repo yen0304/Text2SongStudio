@@ -7,6 +7,7 @@ from app.models.experiment import Experiment, ExperimentRun, ExperimentStatus, R
 from app.models.feedback import Feedback
 from app.models.job import GenerationJob, JobStatus
 from app.models.prompt import Prompt
+from app.models.training_log import TrainingLog
 
 __all__ = [
     "Prompt",
@@ -25,4 +26,5 @@ __all__ = [
     "ABTest",
     "ABTestPair",
     "ABTestStatus",
+    "TrainingLog",
 ]

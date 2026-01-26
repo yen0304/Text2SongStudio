@@ -15,6 +15,7 @@ from app.routers import (
     generation_router,
     health_router,
     jobs_router,
+    logs_router,
     metrics_router,
     prompts_router,
 )
@@ -57,4 +58,5 @@ app.include_router(datasets_router)
 app.include_router(experiments_router)
 app.include_router(ab_tests_router)
 app.include_router(jobs_router)
+app.include_router(logs_router)
 app.include_router(metrics_router)

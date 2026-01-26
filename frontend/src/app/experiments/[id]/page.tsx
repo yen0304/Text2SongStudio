@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { experimentsApi, ExperimentDetail, ExperimentRun } from '@/lib/api';
 import { RunComparison } from '@/components/comparison/RunComparison';
+import { TrainingLogViewer } from '@/components/training/TrainingLogViewer';
 import {
   Loader2,
   ArrowLeft,
@@ -18,6 +19,8 @@ import {
   AlertCircle,
   Plus,
   GitCompare,
+  Terminal,
+  X,
 } from 'lucide-react';
 
 const runStatusConfig: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
@@ -51,6 +54,7 @@ export default function ExperimentDetailPage() {
   const [startingRun, setStartingRun] = useState(false);
   const [selectedRuns, setSelectedRuns] = useState<string[]>([]);
   const [showComparison, setShowComparison] = useState(false);
+  const [viewingLogsRun, setViewingLogsRun] = useState<ExperimentRun | null>(null);
 
   const fetchExperiment = async () => {
     try {
@@ -197,6 +201,7 @@ export default function ExperimentDetailPage() {
                   <th className="text-left p-4 font-medium text-muted-foreground">Final Loss</th>
                   <th className="text-left p-4 font-medium text-muted-foreground">Duration</th>
                   <th className="text-left p-4 font-medium text-muted-foreground">Adapter</th>
+                  <th className="w-20 p-4"></th>
                 </tr>
               </thead>
               <tbody>
@@ -255,6 +260,19 @@ export default function ExperimentDetailPage() {
                           <span className="text-muted-foreground">-</span>
                         )}
                       </td>
+                      <td className="p-4">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setViewingLogsRun(run);
+                          }}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <Terminal size={16} />
+                        </Button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -263,6 +281,42 @@ export default function ExperimentDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Training Logs Viewer */}
+      {viewingLogsRun && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <CardTitle>Training Logs</CardTitle>
+                <Badge variant="secondary">
+                  {viewingLogsRun.name || viewingLogsRun.id.slice(0, 8)}
+                </Badge>
+                {viewingLogsRun.status === 'running' && (
+                  <Badge variant="secondary" className="bg-blue-500/10 text-blue-600">
+                    <Loader2 size={12} className="animate-spin mr-1" />
+                    Running
+                  </Badge>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setViewingLogsRun(null)}
+              >
+                <X size={16} />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <TrainingLogViewer
+              runId={viewingLogsRun.id}
+              isLive={viewingLogsRun.status === 'running'}
+              height="500px"
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Run Comparison View */}
       {showComparison && selectedRuns.length >= 2 && (

@@ -11,3 +11,4 @@ export { datasetsApi } from './datasets';
 export { experimentsApi, type ListExperimentsParams } from './experiments';
 export { abTestsApi, type ListABTestsParams } from './ab-tests';
 export { metricsApi } from './metrics';
+export { logsApi } from './logs';
