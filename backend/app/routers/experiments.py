@@ -1,7 +1,8 @@
+import asyncio
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +17,7 @@ from app.schemas import (
     ExperimentRunResponse,
     ExperimentUpdate,
 )
+from app.services.training import TrainingService
 
 router = APIRouter(prefix="/experiments", tags=["experiments"])
 
@@ -349,6 +351,7 @@ async def list_runs(
 async def create_run(
     experiment_id: UUID,
     data: ExperimentRunCreate,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     """Start a new training run in an experiment."""
@@ -379,7 +382,12 @@ async def create_run(
     await db.commit()
     await db.refresh(run)
 
-    # TODO: Queue training job in background
+    # Queue training job in background
+    # Use asyncio.run since BackgroundTasks runs in threadpool without event loop
+    background_tasks.add_task(
+        asyncio.run,
+        TrainingService.start_training(run.id),
+    )
 
     return ExperimentRunResponse(
         id=run.id,
