@@ -22,7 +22,6 @@ export class ApiError extends Error {
 
 export async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE}${path}`;
-  console.log(`[API] ${options?.method || 'GET'} ${url}`);
 
   try {
     const response = await fetch(url, {
@@ -35,21 +34,17 @@ export async function fetchApi<T>(path: string, options?: RequestInit): Promise<
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      console.error(`[API] Error ${response.status}:`, error);
       throw new Error(error.detail || `API error: ${response.status}`);
     }
 
     // Handle 204 No Content responses
     if (response.status === 204) {
-      console.log(`[API] Response: 204 No Content`);
       return undefined as T;
     }
 
     const data = await response.json();
-    console.log(`[API] Response:`, data);
     return data;
   } catch (err) {
-    console.error(`[API] Request failed:`, err);
     throw err;
   }
 }
