@@ -25,65 +25,67 @@ class TestDatasetServiceFilterBuilding:
             service._mock_db = mock_db
             yield service
 
-    def test_build_filter_query_empty(self, dataset_service):
+    def test_build_quality_filter_empty(self, dataset_service):
         """Test building filter query with no filters."""
-        conditions = dataset_service._build_filter_query(None)
+        conditions = dataset_service._build_quality_filter(None)
         assert conditions == []
 
-    def test_build_filter_query_min_rating(self, dataset_service):
+    def test_build_quality_filter_min_rating(self, dataset_service):
         """Test building filter query with min_rating."""
         filter_query = DatasetFilterQuery(min_rating=3.0)
-        conditions = dataset_service._build_filter_query(filter_query)
+        conditions = dataset_service._build_quality_filter(filter_query)
         assert len(conditions) == 1
 
-    def test_build_filter_query_max_rating(self, dataset_service):
+    def test_build_quality_filter_max_rating(self, dataset_service):
         """Test building filter query with max_rating."""
         filter_query = DatasetFilterQuery(max_rating=5.0)
-        conditions = dataset_service._build_filter_query(filter_query)
+        conditions = dataset_service._build_quality_filter(filter_query)
         assert len(conditions) == 1
 
-    def test_build_filter_query_rating_range(self, dataset_service):
+    def test_build_quality_filter_rating_range(self, dataset_service):
         """Test building filter query with rating range."""
         filter_query = DatasetFilterQuery(min_rating=3.0, max_rating=5.0)
-        conditions = dataset_service._build_filter_query(filter_query)
+        conditions = dataset_service._build_quality_filter(filter_query)
         assert len(conditions) == 2
 
-    def test_build_filter_query_required_tags(self, dataset_service):
-        """Test building filter query with required tags."""
+    def test_build_quality_filter_required_tags(self, dataset_service):
+        """Test building filter query with required tags - tags are not handled in _build_quality_filter."""
         filter_query = DatasetFilterQuery(required_tags=["melodic", "calm"])
-        conditions = dataset_service._build_filter_query(filter_query)
-        assert len(conditions) == 1
+        conditions = dataset_service._build_quality_filter(filter_query)
+        # Tags are not handled in _build_quality_filter
+        assert len(conditions) == 0
 
-    def test_build_filter_query_excluded_tags(self, dataset_service):
-        """Test building filter query with excluded tags."""
+    def test_build_quality_filter_excluded_tags(self, dataset_service):
+        """Test building filter query with excluded tags - tags are not handled in _build_quality_filter."""
         filter_query = DatasetFilterQuery(excluded_tags=["noisy", "distorted"])
-        conditions = dataset_service._build_filter_query(filter_query)
-        assert len(conditions) == 2  # One condition per excluded tag
+        conditions = dataset_service._build_quality_filter(filter_query)
+        # Tags are not handled in _build_quality_filter
+        assert len(conditions) == 0
 
-    def test_build_filter_query_adapter_id(self, dataset_service):
+    def test_build_quality_filter_adapter_id(self, dataset_service):
         """Test building filter query with adapter_id."""
         adapter_id = uuid4()
         filter_query = DatasetFilterQuery(adapter_id=adapter_id)
-        conditions = dataset_service._build_filter_query(filter_query)
+        conditions = dataset_service._build_quality_filter(filter_query)
         assert len(conditions) == 1
 
-    def test_build_filter_query_user_id(self, dataset_service):
+    def test_build_quality_filter_user_id(self, dataset_service):
         """Test building filter query with user_id."""
         user_id = uuid4()
         filter_query = DatasetFilterQuery(user_id=user_id)
-        conditions = dataset_service._build_filter_query(filter_query)
+        conditions = dataset_service._build_quality_filter(filter_query)
         assert len(conditions) == 1
 
-    def test_build_filter_query_date_range(self, dataset_service):
+    def test_build_quality_filter_date_range(self, dataset_service):
         """Test building filter query with date range."""
         filter_query = DatasetFilterQuery(
             start_date=datetime(2024, 1, 1),
             end_date=datetime(2024, 12, 31),
         )
-        conditions = dataset_service._build_filter_query(filter_query)
+        conditions = dataset_service._build_quality_filter(filter_query)
         assert len(conditions) == 2
 
-    def test_build_filter_query_all_filters(self, dataset_service):
+    def test_build_quality_filter_all_filters(self, dataset_service):
         """Test building filter query with all filters."""
         filter_query = DatasetFilterQuery(
             min_rating=3.0,
@@ -95,9 +97,10 @@ class TestDatasetServiceFilterBuilding:
             start_date=datetime(2024, 1, 1),
             end_date=datetime(2024, 12, 31),
         )
-        conditions = dataset_service._build_filter_query(filter_query)
-        # min_rating + max_rating + required_tags + excluded_tag + adapter_id + user_id + start_date + end_date
-        assert len(conditions) == 8
+        conditions = dataset_service._build_quality_filter(filter_query)
+        # min_rating + max_rating + adapter_id + user_id + start_date + end_date
+        # Tags are handled separately, not in _build_quality_filter
+        assert len(conditions) == 6
 
 
 class TestDatasetServiceCountSamples:
