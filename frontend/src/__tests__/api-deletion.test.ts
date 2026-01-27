@@ -1,5 +1,5 @@
 /**
- * Tests for deletion API methods (jobs, adapters, feedback).
+ * Tests for deletion API methods (jobs, adapters, ratings, preferences).
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -9,7 +9,7 @@ const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 // Import modular APIs after mocking
-import { generationApi, adaptersApi, feedbackApi } from '../lib/api';
+import { generationApi, adaptersApi, ratingsApi, preferencesApi } from '../lib/api';
 
 describe('Deletion API Methods', () => {
   beforeEach(() => {
@@ -74,17 +74,17 @@ describe('Deletion API Methods', () => {
     });
   });
 
-  describe('feedbackApi.delete', () => {
-    it('should call DELETE /feedback/{feedbackId}', async () => {
+  describe('ratingsApi.delete', () => {
+    it('should call DELETE /ratings/{ratingId}', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ status: 'deleted', feedback_id: 'test-feedback-id' }),
+        json: async () => ({ status: 'deleted', id: 'test-rating-id' }),
       });
 
-      const result = await feedbackApi.delete('test-feedback-id');
+      const result = await ratingsApi.delete('test-rating-id');
 
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/feedback/test-feedback-id'),
+        expect.stringContaining('/ratings/test-rating-id'),
         expect.objectContaining({
           method: 'DELETE',
         })
@@ -96,10 +96,39 @@ describe('Deletion API Methods', () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 404,
-        json: async () => ({ detail: 'Feedback not found' }),
+        json: async () => ({ detail: 'Rating not found' }),
       });
 
-      await expect(feedbackApi.delete('nonexistent-id')).rejects.toThrow('Feedback not found');
+      await expect(ratingsApi.delete('nonexistent-id')).rejects.toThrow('Rating not found');
+    });
+  });
+
+  describe('preferencesApi.delete', () => {
+    it('should call DELETE /preferences/{preferenceId}', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: 'deleted', id: 'test-preference-id' }),
+      });
+
+      const result = await preferencesApi.delete('test-preference-id');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/preferences/test-preference-id'),
+        expect.objectContaining({
+          method: 'DELETE',
+        })
+      );
+      expect(result.status).toBe('deleted');
+    });
+
+    it('should throw on 404 not found', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: async () => ({ detail: 'Preference not found' }),
+      });
+
+      await expect(preferencesApi.delete('nonexistent-id')).rejects.toThrow('Preference not found');
     });
   });
 

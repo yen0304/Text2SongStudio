@@ -4,8 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { generationApi, feedbackApi, type JobFeedbackResponse, type SampleFeedbackGroup } from '@/lib/api';
-import { Star, ThumbsUp, MessageSquare, Loader2, RefreshCw, Trash2 } from 'lucide-react';
+import { generationApi, ratingsApi, preferencesApi, type JobFeedbackResponse, type SampleFeedbackGroup } from '@/lib/api';
+import { Star, ThumbsUp, MessageSquare, Loader2, RefreshCw, Trash2, Tag } from 'lucide-react';
 
 interface JobFeedbackPanelProps {
   jobId: string;
@@ -39,7 +39,7 @@ function SampleFeedbackCard({
 }: {
   sample: SampleFeedbackGroup;
   allAudioIds: string[];
-  onDeleteFeedback: (feedbackId: string) => void;
+  onDeleteFeedback: (feedbackId: string, isPreference: boolean) => void;
   deletingId: string | null;
   deleteConfirmId: string | null;
 }) {
@@ -65,77 +65,82 @@ function SampleFeedbackCard({
         )}
       </div>
 
+      {/* Display sample-level tags from AudioTag table */}
+      {sample.tags && sample.tags.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1">
+          <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+          {sample.tags.map((tag) => (
+            <Badge key={tag} variant="secondary" className="text-xs">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      )}
+
       {sample.feedback.length === 0 ? (
         <p className="text-sm text-muted-foreground italic">No feedback yet</p>
       ) : (
         <div className="space-y-2">
-          {sample.feedback.map((fb) => (
-            <div
-              key={fb.id}
-              className="bg-muted/50 rounded-md p-3 space-y-2"
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                {fb.rating !== null && (
-                  <div className="flex items-center gap-1">
-                    <Star className="h-3.5 w-3.5 fill-primary text-primary" />
-                    <span className="text-sm font-medium">{fb.rating}</span>
-                    {fb.rating_criterion && fb.rating_criterion !== 'overall' && (
-                      <span className="text-xs text-muted-foreground">
-                        ({fb.rating_criterion})
-                      </span>
-                    )}
-                  </div>
-                )}
-                
-                {fb.preferred_over && (
-                  <div className="flex items-center gap-1 text-green-600">
-                    <ThumbsUp className="h-3.5 w-3.5" />
-                    <span className="text-sm">
-                      Preferred over {getLabelForAudioId(fb.preferred_over)}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {fb.tags && fb.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {fb.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-
-              {fb.notes && (
-                <div className="flex items-start gap-2 text-sm">
-                  <MessageSquare className="h-3.5 w-3.5 mt-0.5 text-muted-foreground" />
-                  <p className="text-muted-foreground italic">&quot;{fb.notes}&quot;</p>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-muted-foreground">
-                  {new Date(fb.created_at).toLocaleString()}
-                </p>
-                <Button
-                  variant={deleteConfirmId === fb.id ? 'destructive' : 'ghost'}
-                  size="sm"
-                  className={deleteConfirmId === fb.id ? 'h-6 px-2' : 'h-6 w-6 p-0 text-muted-foreground hover:text-destructive'}
-                  onClick={() => onDeleteFeedback(fb.id)}
-                  disabled={deletingId === fb.id}
-                >
-                  {deletingId === fb.id ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : deleteConfirmId === fb.id ? (
-                    <span className="text-xs">Confirm?</span>
-                  ) : (
-                    <Trash2 className="h-3 w-3" />
+          {sample.feedback.map((fb) => {
+            const isPreference = fb.preferred_over !== null;
+            return (
+              <div
+                key={fb.id}
+                className="bg-muted/50 rounded-md p-3 space-y-2"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  {fb.rating !== null && (
+                    <div className="flex items-center gap-1">
+                      <Star className="h-3.5 w-3.5 fill-primary text-primary" />
+                      <span className="text-sm font-medium">{fb.rating}</span>
+                      {fb.rating_criterion && fb.rating_criterion !== 'overall' && (
+                        <span className="text-xs text-muted-foreground">
+                          ({fb.rating_criterion})
+                        </span>
+                      )}
+                    </div>
                   )}
-                </Button>
+                  
+                  {fb.preferred_over && (
+                    <div className="flex items-center gap-1 text-green-600">
+                      <ThumbsUp className="h-3.5 w-3.5" />
+                      <span className="text-sm">
+                        Preferred over {getLabelForAudioId(fb.preferred_over)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {fb.notes && (
+                  <div className="flex items-start gap-2 text-sm">
+                    <MessageSquare className="h-3.5 w-3.5 mt-0.5 text-muted-foreground" />
+                    <p className="text-muted-foreground italic">&quot;{fb.notes}&quot;</p>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(fb.created_at).toLocaleString()}
+                  </p>
+                  <Button
+                    variant={deleteConfirmId === fb.id ? 'destructive' : 'ghost'}
+                    size="sm"
+                    className={deleteConfirmId === fb.id ? 'h-6 px-2' : 'h-6 w-6 p-0 text-muted-foreground hover:text-destructive'}
+                    onClick={() => onDeleteFeedback(fb.id, isPreference)}
+                    disabled={deletingId === fb.id}
+                  >
+                    {deletingId === fb.id ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : deleteConfirmId === fb.id ? (
+                      <span className="text-xs">Confirm?</span>
+                    ) : (
+                      <Trash2 className="h-3 w-3" />
+                    )}
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -184,12 +189,19 @@ export function JobFeedbackPanel({ jobId, refreshTrigger = 0 }: JobFeedbackPanel
     fetchFeedback(true);
   };
 
-  const handleDeleteFeedback = async (feedbackId: string) => {
+  // Track whether the pending delete is a preference (for using correct API)
+  const [pendingDeleteIsPreference, setPendingDeleteIsPreference] = useState(false);
+
+  const handleDeleteFeedback = async (feedbackId: string, isPreference: boolean) => {
     if (deleteConfirm === feedbackId) {
-      // User confirmed, delete
+      // User confirmed, delete using appropriate API
       setDeletingId(feedbackId);
       try {
-        await feedbackApi.delete(feedbackId);
+        if (pendingDeleteIsPreference) {
+          await preferencesApi.delete(feedbackId);
+        } else {
+          await ratingsApi.delete(feedbackId);
+        }
         setDeleteConfirm(null);
         fetchFeedback(true);
       } catch (e) {
@@ -198,9 +210,13 @@ export function JobFeedbackPanel({ jobId, refreshTrigger = 0 }: JobFeedbackPanel
         setDeletingId(null);
       }
     } else {
-      // Show confirmation
+      // Show confirmation and remember the type
       setDeleteConfirm(feedbackId);
-      setTimeout(() => setDeleteConfirm(null), 3000);
+      setPendingDeleteIsPreference(isPreference);
+      setTimeout(() => {
+        setDeleteConfirm(null);
+        setPendingDeleteIsPreference(false);
+      }, 3000);
     }
   };
 

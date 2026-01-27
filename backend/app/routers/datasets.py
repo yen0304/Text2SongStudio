@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from uuid import UUID
 
@@ -88,11 +89,10 @@ async def create_dataset(
     # Build dataset from feedback
     sample_count = await dataset_service.count_samples(data.type, data.filter_query)
 
+    # Allow creating empty datasets (samples may be added later via feedback)
+    # Just warn in logs if empty
     if sample_count == 0:
-        raise HTTPException(
-            status_code=400,
-            detail="No samples match the filter criteria",
-        )
+        logging.warning(f"Creating dataset '{data.name}' with 0 matching samples")
 
     dataset = Dataset(
         name=data.name,

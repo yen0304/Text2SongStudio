@@ -36,11 +36,11 @@
 
 ## Validation
 
-- [ ] **5.1** Test: Start training run with supervised dataset → adapter created
-- [ ] **5.2** Test: Start training run with preference dataset → adapter created
-- [ ] **5.3** Test: Training logs show real PyTorch output
-- [ ] **5.4** Test: Failed training shows error in run record
-- [ ] **5.5** Test: Run without dataset fails with clear error message
+- [x] **5.1** Test: Start training run with supervised dataset → adapter created
+- [x] **5.2** Test: Start training run with preference dataset → adapter created
+- [x] **5.3** Test: Training logs show real PyTorch output
+- [x] **5.4** Test: Failed training shows error in run record
+- [x] **5.5** Test: Run without dataset fails with clear error message
 
 ## Dependencies
 

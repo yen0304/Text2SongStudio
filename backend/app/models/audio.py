@@ -23,9 +23,29 @@ class AudioSample(Base):
     # Relationships
     prompt = relationship("Prompt", back_populates="audio_samples")
     adapter = relationship("Adapter", back_populates="audio_samples")
-    feedback = relationship(
-        "Feedback",
-        foreign_keys="[Feedback.audio_id]",
+
+    # Feedback models (industry standard RLHF)
+    quality_ratings = relationship(
+        "QualityRating",
         back_populates="audio_sample",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+    tags = relationship(
+        "AudioTag",
+        back_populates="audio_sample",
+        lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+    chosen_in_pairs = relationship(
+        "PreferencePair",
+        foreign_keys="[PreferencePair.chosen_audio_id]",
+        back_populates="chosen_audio",
+        lazy="selectin",
+    )
+    rejected_in_pairs = relationship(
+        "PreferencePair",
+        foreign_keys="[PreferencePair.rejected_audio_id]",
+        back_populates="rejected_audio",
         lazy="selectin",
     )

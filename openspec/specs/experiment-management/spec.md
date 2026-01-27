@@ -29,41 +29,42 @@ The system SHALL allow users to create, read, update, and delete experiments.
 - **AND** the experiment appears in the default list view again
 
 ### Requirement: Experiment Runs
+
 The system SHALL track individual training runs within an experiment.
 
 #### Scenario: Start training run
+
 - **WHEN** a user starts a run with training configuration
-- **THEN** the system creates a run record linked to the experiment
-- **AND** queues the training job
+- **THEN** the system validates a dataset is linked to the experiment
+- **AND** exports the dataset to JSONL format for training
+- **AND** creates a run record linked to the experiment
+- **AND** spawns a training subprocess with real MusicGen + LoRA training
 - **AND** returns a run ID for status tracking
 
-#### Scenario: List runs for experiment
-- **WHEN** a user requests runs for an experiment
-- **THEN** the system returns runs with config, metrics summary, status, and resulting adapter
-- **AND** orders by creation date descending
+#### Scenario: Start training run without dataset
+
+- **WHEN** a user attempts to start a run on an experiment with no dataset
+- **THEN** the system returns an error indicating dataset is required
+- **AND** does not create a run record
 
 #### Scenario: Get run metrics
-- **WHEN** a user requests metrics for a run
-- **THEN** the system returns time-series metrics (loss, learning rate, etc.)
-- **AND** includes final metrics summary
 
-#### Scenario: Compare runs
-- **WHEN** a user selects multiple runs for comparison
-- **THEN** the system returns side-by-side metrics for the selected runs
-- **AND** highlights the best performing run per metric
+- **WHEN** a user requests metrics for a completed run
+- **THEN** the system returns actual training metrics (loss, learning rate)
+- **AND** includes the `adapter_id` of the registered adapter
+- **AND** includes `final_loss` from real training output
 
 ### Requirement: Run-to-Adapter Linking
+
 The system SHALL automatically link completed runs to their resulting adapters.
 
 #### Scenario: Link adapter after training
-- **WHEN** a training run completes successfully
-- **THEN** the system links the new adapter to the run
-- **AND** updates the experiment's best metrics if improved
 
-#### Scenario: Navigate from run to adapter
-- **WHEN** a user views a completed run
-- **THEN** the system provides a link to the resulting adapter
-- **AND** shows the adapter's version in the run summary
+- **WHEN** a training run completes successfully
+- **THEN** the system creates an Adapter record from training output
+- **AND** links the new adapter to the run via `adapter_id`
+- **AND** updates the experiment's best metrics if this run improved them
+- **AND** adapter name follows pattern `{experiment_name}-{run_name}`
 
 ### Requirement: Experiment Status Tracking
 The system SHALL track experiment lifecycle status.
@@ -110,4 +111,50 @@ The system SHALL provide a user interface for archiving experiments.
 - **WHEN** a user views an archived experiment
 - **THEN** the system displays an unarchive button
 - **AND** clicking it restores the experiment to active status
+
+### Requirement: Training Log Streaming
+
+The system SHALL provide real-time streaming of training logs for experiment runs.
+
+#### Scenario: View live training logs
+
+- **WHEN** a user opens the detail view of a running experiment run
+- **THEN** the system displays the training terminal output in real-time
+- **AND** supports terminal features including carriage returns and ANSI colors
+
+#### Scenario: View historical logs
+
+- **WHEN** a user views a completed or failed experiment run
+- **THEN** the system displays the full training log history
+- **AND** the log is rendered as it appeared in the original terminal
+
+#### Scenario: Navigate away and return
+
+- **WHEN** a user navigates away from the run detail page during training
+- **AND** returns to the page later
+- **THEN** the system displays the complete log history up to that point
+- **AND** resumes live streaming if the run is still in progress
+
+#### Scenario: Training completes while viewing
+
+- **WHEN** a user is viewing live training logs
+- **AND** the training run completes (success or failure)
+- **THEN** the system displays the final log output
+- **AND** indicates that the run has finished
+
+### Requirement: Training Log Persistence
+
+The system SHALL persist training logs for all experiment runs.
+
+#### Scenario: Store logs during training
+
+- **WHEN** a training run is in progress
+- **THEN** the system captures stdout and stderr from the training process
+- **AND** stores the raw terminal output including control characters
+
+#### Scenario: Retrieve logs after training
+
+- **WHEN** a user requests logs for a past experiment run
+- **THEN** the system returns the complete stored log data
+- **AND** the log can be rendered to reproduce the original terminal output
 

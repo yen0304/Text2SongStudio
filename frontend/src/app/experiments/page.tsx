@@ -20,7 +20,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { experimentsApi, Experiment } from '@/lib/api';
+import { experimentsApi, datasetsApi, Experiment, Dataset } from '@/lib/api';
+import { Select } from '@/components/ui/select';
 import {
   Loader2,
   Plus,
@@ -32,6 +33,7 @@ import {
   X,
   Archive,
   ArchiveRestore,
+  Database,
 } from 'lucide-react';
 
 const statusConfig: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
@@ -57,11 +59,13 @@ function formatTime(dateStr: string): string {
 
 export default function ExperimentsPage() {
   const [experiments, setExperiments] = useState<Experiment[]>([]);
+  const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
+  const [selectedDatasetId, setSelectedDatasetId] = useState<string>('');
   const [showArchived, setShowArchived] = useState(false);
   const [archiveTarget, setArchiveTarget] = useState<Experiment | null>(null);
   const [archiving, setArchiving] = useState(false);
@@ -77,21 +81,33 @@ export default function ExperimentsPage() {
     }
   };
 
+  const fetchDatasets = async () => {
+    try {
+      const data = await datasetsApi.list();
+      setDatasets(data.items);
+    } catch (error) {
+      console.error('Failed to fetch datasets:', error);
+    }
+  };
+
   useEffect(() => {
     fetchExperiments();
+    fetchDatasets();
   }, [showArchived]);
 
   const handleCreate = async () => {
-    if (!newName.trim()) return;
+    if (!newName.trim() || !selectedDatasetId) return;
     
     setCreating(true);
     try {
       await experimentsApi.create({
         name: newName.trim(),
         description: newDescription.trim() || undefined,
+        dataset_id: selectedDatasetId,
       });
       setNewName('');
       setNewDescription('');
+      setSelectedDatasetId('');
       setShowCreateForm(false);
       fetchExperiments();
     } catch (error) {
@@ -203,8 +219,27 @@ export default function ExperimentsPage() {
                   rows={2}
                 />
               </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Dataset <span className="text-red-500">*</span></label>
+                <Select
+                  value={selectedDatasetId}
+                  onChange={(e) => setSelectedDatasetId(e.target.value)}
+                  options={[
+                    { value: '', label: 'Select a dataset...' },
+                    ...datasets.map((ds) => ({
+                      value: ds.id,
+                      label: `${ds.name} (${ds.type})`,
+                    })),
+                  ]}
+                />
+                {datasets.length === 0 && (
+                  <p className="text-xs text-orange-500 mt-1">
+                    No datasets available. Create one in Datasets page first.
+                  </p>
+                )}
+              </div>
               <div className="flex gap-2">
-                <Button onClick={handleCreate} disabled={creating || !newName.trim()}>
+                <Button onClick={handleCreate} disabled={creating || !newName.trim() || !selectedDatasetId}>
                   {creating ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
                   Create Experiment
                 </Button>

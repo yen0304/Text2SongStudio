@@ -6,18 +6,21 @@
  * ## Usage
  * 
  * ```typescript
- * import { promptsApi, feedbackApi, adaptersApi } from '@/lib/api';
+ * import { promptsApi, ratingsApi, preferencesApi, tagsApi } from '@/lib/api';
  * 
  * const prompt = await promptsApi.create({ text: 'A cheerful melody' });
- * const feedback = await feedbackApi.list({ min_rating: 4 });
- * const adapters = await adaptersApi.list({ activeOnly: true });
+ * const ratings = await ratingsApi.list({ min_rating: 4 });
+ * const preferences = await preferencesApi.getForPrompt(promptId);
+ * const tags = await tagsApi.getForAudio(audioId);
  * ```
  * 
  * ## Available Modules
  * - `promptsApi` - Prompt management
  * - `audioApi` - Audio streaming and metadata
  * - `generationApi` - Generation jobs and status
- * - `feedbackApi` - User feedback collection
+ * - `ratingsApi` - Quality ratings (SFT training)
+ * - `preferencesApi` - Preference pairs (DPO/RLHF training)
+ * - `tagsApi` - Audio tagging and categorization
  * - `adaptersApi` - LoRA adapter management
  * - `datasetsApi` - Training dataset management
  * - `experimentsApi` - Experiment tracking
@@ -36,7 +39,9 @@ export {
   promptsApi,
   audioApi,
   generationApi,
-  feedbackApi,
+  ratingsApi,
+  preferencesApi,
+  tagsApi,
   adaptersApi,
   datasetsApi,
   experimentsApi,

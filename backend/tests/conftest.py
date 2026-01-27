@@ -1,4 +1,18 @@
-"""Pytest configuration and fixtures."""
+"""Pytest configuration and fixtures.
+
+Testing Strategy:
+-----------------
+This project uses MOCK-BASED testing for unit tests. All database operations
+are mocked using unittest.mock to ensure:
+1. Tests are fast and don't require a running database
+2. Tests are isolated and don't affect production data
+3. Tests are deterministic and reproducible
+
+For integration tests that require a real database, consider:
+- Using a separate test database (e.g., text2song_test)
+- Using pytest-docker or testcontainers for ephemeral databases
+- Running tests in CI with a dedicated test database service
+"""
 
 import sys
 from datetime import datetime
@@ -31,7 +45,11 @@ _app_instance = None
 
 @pytest.fixture(scope="session", autouse=True)
 def mock_init_db():
-    """Mock init_db at session level to avoid actual DB connections."""
+    """Mock init_db at session level to avoid actual DB connections.
+
+    This ensures the app's lifespan doesn't try to connect to the real database.
+    All database operations in tests should use mock_db_session fixture.
+    """
     global _init_db_patcher
     _init_db_patcher = patch("app.main.init_db", new_callable=AsyncMock)
     _init_db_patcher.start()

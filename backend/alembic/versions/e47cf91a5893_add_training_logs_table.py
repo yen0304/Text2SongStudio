@@ -1,7 +1,7 @@
 """add_training_logs_table
 
 Revision ID: e47cf91a5893
-Revises: d36bf90e4782
+Revises: b1fdaef0bc6a
 Create Date: 2026-01-26
 
 """
@@ -14,7 +14,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = "e47cf91a5893"
-down_revision: Union[str, None] = "d36bf90e4782"
+down_revision: Union[str, None] = "b1fdaef0bc6a"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

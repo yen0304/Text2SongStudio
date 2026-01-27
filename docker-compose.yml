@@ -1,4 +1,4 @@
-# Text2Song Studio - Full Stack Docker Compose
+# 只啟動基礎服務 (PostgreSQL + MinIO)，不包含 backend 和 frontend
 services:
   postgres:
     image: postgres:16-alpine
@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: text2song
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -35,52 +35,6 @@ services:
       timeout: 5s
       retries: 5
 
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: text2song-backend
-    environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/text2song
-      STORAGE_TYPE: s3
-      S3_ENDPOINT: http://minio:9000
-      S3_BUCKET: text2song-audio
-      S3_ACCESS_KEY: minioadmin
-      S3_SECRET_KEY: minioadmin
-      MODEL_CACHE_DIR: /app/model_cache
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./backend:/app
-      - backend_model_cache:/app/model_cache
-    depends_on:
-      postgres:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: text2song-frontend
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
-    depends_on:
-      - backend
-
 volumes:
   postgres_data:
   minio_data:
-  backend_model_cache:

@@ -226,7 +226,8 @@ export default function JobDetailPage() {
           </div>
           <div>
             <FeedbackPanel 
-              audioIds={job.audio_ids} 
+              audioIds={job.audio_ids}
+              promptId={job.prompt_id}
               onFeedbackSubmitted={handleFeedbackSubmitted}
             />
           </div>

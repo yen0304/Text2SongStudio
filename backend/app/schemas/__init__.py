@@ -20,6 +20,15 @@ from app.schemas.audio import (
     AudioCompareResponse,
     AudioSampleResponse,
 )
+from app.schemas.audio_tag import (
+    AudioTagBulkCreate,
+    AudioTagBulkUpdate,
+    AudioTagCreate,
+    AudioTagListResponse,
+    AudioTagResponse,
+    AudioTagStats,
+    AvailableTagsResponse,
+)
 from app.schemas.dataset import (
     DatasetCreate,
     DatasetExportRequest,
@@ -40,13 +49,6 @@ from app.schemas.experiment import (
     ExperimentRunResponse,
     ExperimentUpdate,
 )
-from app.schemas.feedback import (
-    FeedbackCreate,
-    FeedbackListResponse,
-    FeedbackResponse,
-    FeedbackStatsResponse,
-    FeedbackSummaryResponse,
-)
 from app.schemas.generation import (
     GenerationJobResponse,
     GenerationRequest,
@@ -54,11 +56,26 @@ from app.schemas.generation import (
     SampleFeedbackGroup,
     SampleFeedbackItem,
 )
+from app.schemas.preference_pair import (
+    PreferencePairCreate,
+    PreferencePairListResponse,
+    PreferencePairResponse,
+    PreferencePairStats,
+    PreferencePairWithDetails,
+)
 from app.schemas.prompt import (
     PromptAttributes,
     PromptCreate,
     PromptListResponse,
     PromptResponse,
+)
+
+# New feedback schemas (industry standard)
+from app.schemas.quality_rating import (
+    QualityRatingCreate,
+    QualityRatingListResponse,
+    QualityRatingResponse,
+    QualityRatingStats,
 )
 from app.schemas.training_log import (
     TrainingLogChunk,
@@ -79,11 +96,24 @@ __all__ = [
     "JobFeedbackResponse",
     "SampleFeedbackGroup",
     "SampleFeedbackItem",
-    "FeedbackCreate",
-    "FeedbackResponse",
-    "FeedbackListResponse",
-    "FeedbackStatsResponse",
-    "FeedbackSummaryResponse",
+    # Feedback (industry standard RLHF)
+    "QualityRatingCreate",
+    "QualityRatingResponse",
+    "QualityRatingListResponse",
+    "QualityRatingStats",
+    "PreferencePairCreate",
+    "PreferencePairResponse",
+    "PreferencePairWithDetails",
+    "PreferencePairListResponse",
+    "PreferencePairStats",
+    "AudioTagCreate",
+    "AudioTagResponse",
+    "AudioTagListResponse",
+    "AudioTagBulkCreate",
+    "AudioTagBulkUpdate",
+    "AudioTagStats",
+    "AvailableTagsResponse",
+    # Other schemas
     "AdapterCreate",
     "AdapterUpdate",
     "AdapterResponse",

@@ -2,7 +2,7 @@ import asyncio
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -178,13 +178,17 @@ async def update_experiment(
     if not experiment:
         raise HTTPException(status_code=404, detail="Experiment not found")
 
-    if data.name is not None:
+    # Get raw data to distinguish between None (not provided) and explicit null
+    raw_data = data.model_dump(exclude_unset=True)
+
+    if "name" in raw_data:
         experiment.name = data.name
-    if data.description is not None:
+    if "description" in raw_data:
         experiment.description = data.description
-    if data.dataset_id is not None:
+    if "dataset_id" in raw_data:
+        # Allow setting dataset_id to None explicitly
         experiment.dataset_id = data.dataset_id
-    if data.config is not None:
+    if "config" in raw_data:
         experiment.config = data.config
 
     experiment.updated_at = datetime.utcnow()
@@ -351,7 +355,6 @@ async def list_runs(
 async def create_run(
     experiment_id: UUID,
     data: ExperimentRunCreate,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     """Start a new training run in an experiment."""
@@ -382,12 +385,9 @@ async def create_run(
     await db.commit()
     await db.refresh(run)
 
-    # Queue training job in background
-    # Use asyncio.run since BackgroundTasks runs in threadpool without event loop
-    background_tasks.add_task(
-        asyncio.run,
-        TrainingService.start_training(run.id),
-    )
+    # Queue training job in background using asyncio.create_task
+    # This ensures it runs without blocking the API
+    asyncio.create_task(TrainingService.start_training(run.id))
 
     return ExperimentRunResponse(
         id=run.id,

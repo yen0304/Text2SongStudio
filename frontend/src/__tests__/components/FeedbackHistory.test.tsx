@@ -5,30 +5,26 @@ import { FeedbackHistory } from '@/components/FeedbackHistory';
 // Mock the api module with modular APIs
 const mockList = vi.fn();
 vi.mock('@/lib/api', () => ({
-  feedbackApi: {
+  ratingsApi: {
     list: (...args: unknown[]) => mockList(...args),
   },
 }));
 
-const mockFeedbackData = {
+const mockRatingsData = {
   items: [
     {
-      id: 'feedback-1',
+      id: 'rating-1',
       audio_id: 'audio-1',
       rating: 4,
-      rating_criterion: 'overall',
-      preferred_over: null,
-      tags: ['good_melody', 'creative'],
+      criterion: 'overall',
       notes: 'Nice melody!',
       created_at: '2024-01-01T00:00:00Z',
     },
     {
-      id: 'feedback-2',
+      id: 'rating-2',
       audio_id: 'audio-2',
       rating: 3,
-      rating_criterion: 'overall',
-      preferred_over: 'audio-1',
-      tags: ['repetitive'],
+      criterion: 'overall',
       notes: null,
       created_at: '2024-01-02T00:00:00Z',
     },
@@ -39,7 +35,7 @@ const mockFeedbackData = {
 describe('FeedbackHistory', () => {
   beforeEach(() => {
     mockList.mockClear();
-    mockList.mockResolvedValue(mockFeedbackData);
+    mockList.mockResolvedValue(mockRatingsData);
   });
 
   it('renders feedback history component', async () => {
@@ -94,13 +90,13 @@ describe('FeedbackHistory', () => {
     });
   });
 
-  it('uses initialJobId prop as filter', async () => {
-    render(<FeedbackHistory initialJobId="job-123" />);
+  it('uses initialAudioId prop as filter', async () => {
+    render(<FeedbackHistory initialAudioId="audio-123" />);
     
     await waitFor(() => {
       expect(mockList).toHaveBeenCalledWith(
         expect.objectContaining({
-          job_id: 'job-123',
+          audio_id: 'audio-123',
         })
       );
     });

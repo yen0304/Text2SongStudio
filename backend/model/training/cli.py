@@ -13,7 +13,7 @@ def train_command(args):
     """Run training."""
     # Load config from file if provided
     if args.config:
-        with open(args.config, "r") as f:
+        with open(args.config) as f:
             config_data = json.load(f)
         config = TrainingConfig.from_dict(config_data)
     else:
@@ -42,14 +42,18 @@ def train_command(args):
     # Run training
     if config.dataset_type == "supervised":
         from model.training.supervised import train_supervised
+
         output_path = train_supervised(config)
     else:
         from model.training.preference import train_preference
+
         output_path = train_preference(config)
 
     print(f"\nTraining complete! Adapter saved to: {output_path}")
-    print(f"\nTo register this adapter with the API, run:")
-    print(f"  python -m model.training.cli register --path {output_path} --name {config.adapter_name} --version {config.adapter_version}")
+    print("\nTo register this adapter with the API, run:")
+    print(
+        f"  python -m model.training.cli register --path {output_path} --name {config.adapter_name} --version {config.adapter_version}"
+    )
 
 
 def register_command(args):
@@ -62,15 +66,17 @@ def register_command(args):
     config_path = Path(args.path) / "training_config.json"
     training_config = {}
     if config_path.exists():
-        with open(config_path, "r") as f:
+        with open(config_path) as f:
             training_config = json.load(f)
 
     # Register adapter
     data = {
         "name": args.name,
         "version": args.version,
-        "description": args.description or training_config.get("adapter_description", ""),
-        "base_model": args.base_model or training_config.get("base_model", "facebook/musicgen-small"),
+        "description": args.description
+        or training_config.get("adapter_description", ""),
+        "base_model": args.base_model
+        or training_config.get("base_model", "facebook/musicgen-small"),
         "storage_path": str(Path(args.path).absolute()),
         "training_config": training_config,
     }
@@ -82,7 +88,7 @@ def register_command(args):
 
     if response.status_code == 201:
         adapter = response.json()
-        print(f"Adapter registered successfully!")
+        print("Adapter registered successfully!")
         print(f"  ID: {adapter['id']}")
         print(f"  Name: {adapter['name']} v{adapter['version']}")
     else:
@@ -126,7 +132,9 @@ def main():
     train_parser = subparsers.add_parser("train", help="Train a LoRA adapter")
     train_parser.add_argument("--config", help="Path to config JSON file")
     train_parser.add_argument("--dataset", help="Path to training dataset")
-    train_parser.add_argument("--type", choices=["supervised", "preference"], default="supervised")
+    train_parser.add_argument(
+        "--type", choices=["supervised", "preference"], default="supervised"
+    )
     train_parser.add_argument("--output", help="Output directory")
     train_parser.add_argument("--name", help="Adapter name")
     train_parser.add_argument("--version", default="1.0.0", help="Adapter version")
@@ -141,7 +149,9 @@ def main():
     train_parser.set_defaults(func=train_command)
 
     # Register command
-    register_parser = subparsers.add_parser("register", help="Register adapter with API")
+    register_parser = subparsers.add_parser(
+        "register", help="Register adapter with API"
+    )
     register_parser.add_argument("--path", required=True, help="Path to adapter")
     register_parser.add_argument("--name", required=True, help="Adapter name")
     register_parser.add_argument("--version", default="1.0.0", help="Adapter version")

@@ -1,16 +1,16 @@
 'use client';
 
-import { FeedbackStats } from '@/lib/api';
+import { RatingStats } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface FeedbackStatsDisplayProps {
-  stats: FeedbackStats | null;
+  stats: RatingStats | null;
   isLoading: boolean;
 }
 
 const LoadingState = (
-  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-    {[1, 2, 3, 4].map((i) => (
+  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+    {[1, 2, 3].map((i) => (
       <div key={i} className="h-24 bg-muted animate-pulse rounded-lg" />
     ))}
   </div>
@@ -30,33 +30,31 @@ export function FeedbackStatsDisplay({ stats, isLoading }: FeedbackStatsDisplayP
   }
 
   const ratingLabels = ['1', '2', '3', '4', '5'];
-  const maxCount = Math.max(...Object.values(stats.rating_distribution), 1);
+  const distribution = stats.rating_distribution || {};
+  const maxCount = Math.max(...Object.values(distribution).map(v => Number(v)), 1);
+  const highRatedCount = (distribution[4] || 0) + (distribution[5] || 0);
 
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{stats.total_feedback}</div>
-            <p className="text-sm text-muted-foreground">Total Feedback</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">{stats.total_ratings}</div>
-            <p className="text-sm text-muted-foreground">Ratings</p>
+            <p className="text-sm text-muted-foreground">Total Ratings</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{stats.total_preferences}</div>
-            <p className="text-sm text-muted-foreground">Preferences</p>
+            <div className="text-2xl font-bold">
+              {stats.average_rating?.toFixed(1) || 'N/A'}
+            </div>
+            <p className="text-sm text-muted-foreground">Average Rating</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-green-600">{stats.high_rated_samples}</div>
+            <div className="text-2xl font-bold text-green-600">{highRatedCount}</div>
             <p className="text-sm text-muted-foreground">High Rated (4+)</p>
           </CardContent>
         </Card>
@@ -70,7 +68,7 @@ export function FeedbackStatsDisplay({ stats, isLoading }: FeedbackStatsDisplayP
         <CardContent>
           <div className="flex items-end gap-2 h-32">
             {ratingLabels.map((label) => {
-              const count = (stats.rating_distribution as Record<string, number>)[label] || 0;
+              const count = Number(distribution[label as unknown as number] || 0);
               const height = maxCount > 0 ? (count / maxCount) * 100 : 0;
               return (
                 <div key={label} className="flex-1 flex flex-col items-center gap-2">

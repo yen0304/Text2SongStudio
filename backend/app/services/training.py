@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
 from uuid import UUID
@@ -23,8 +24,8 @@ from app.services.log_capture import LogCaptureService
 
 settings = get_settings()
 
-# Project root for PYTHONPATH (backend is at project_root/backend)
-PROJECT_ROOT = Path(__file__).parents[3]
+# Backend root directory (where model/ now lives)
+BACKEND_ROOT = Path(__file__).parents[2]
 
 
 class TrainingService:
@@ -126,7 +127,7 @@ class TrainingService:
 
             # Set environment with PYTHONPATH to find model.training module
             env = os.environ.copy()
-            env["PYTHONPATH"] = str(PROJECT_ROOT)
+            env["PYTHONPATH"] = str(BACKEND_ROOT)
 
             # Start subprocess with pipe for stdout/stderr
             process = await asyncio.create_subprocess_exec(
@@ -134,7 +135,7 @@ class TrainingService:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,  # Merge stderr into stdout
                 env=env,
-                cwd=str(PROJECT_ROOT),  # Run from project root
+                cwd=str(BACKEND_ROOT),  # Run from backend root
             )
 
             # Capture output
@@ -218,8 +219,9 @@ class TrainingService:
             dataset_file = os.path.join(dataset_path, "preferences.jsonl")
             training_type = "preference"
 
+        # Use sys.executable to ensure we use the same Python environment as the backend
         cmd = [
-            "python",
+            sys.executable,
             "-m",
             "model.training.cli",
             "train",

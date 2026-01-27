@@ -67,7 +67,9 @@ logs/
 # Model cache
 model_cache/
 /adapters/
+backend/adapters/
 exports/
+backend/exports/
 *.pt
 *.pth
 *.bin

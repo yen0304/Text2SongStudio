@@ -22,7 +22,7 @@
 
 ## 4. Frontend - Dependencies & Setup
 
-- [x] 4.1 Install `@xterm/xterm` and `@xterm/addon-fit` packages
+- [x] 4.1 Install `xterm` and `@xterm/addon-fit` packages
 - [x] 4.2 Configure xterm CSS imports
 
 ## 5. Frontend - TrainingLogViewer Component
@@ -47,7 +47,7 @@
 - [x] 7.2 Backend: Test SSE endpoint with mock data
 - [x] 7.3 Backend: Test history endpoint
 - [x] 7.4 Frontend: Test TrainingLogViewer component
-- [X] 7.5 Integration: Test full flow with actual training (manual testing required)
+- [x] 7.5 Integration: Test full flow with actual training
 
 ## 8. Documentation
 

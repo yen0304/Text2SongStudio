@@ -53,7 +53,7 @@ export default function GeneratePage() {
             {audioSamples.length > 0 ? (
               <>
                 <AudioPlayer audioIds={audioSamples} />
-                <FeedbackPanel audioIds={audioSamples} />
+                <FeedbackPanel audioIds={audioSamples} promptId={currentPromptId} />
               </>
             ) : (
               <Card>

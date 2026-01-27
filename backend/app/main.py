@@ -11,13 +11,16 @@ from app.routers import (
     audio_router,
     datasets_router,
     experiments_router,
-    feedback_router,
     generation_router,
     health_router,
     jobs_router,
     logs_router,
     metrics_router,
+    preferences_router,
     prompts_router,
+    # New feedback system (industry standard)
+    ratings_router,
+    tags_router,
 )
 
 settings = get_settings()
@@ -52,7 +55,6 @@ app.include_router(health_router)
 app.include_router(prompts_router)
 app.include_router(generation_router)
 app.include_router(audio_router)
-app.include_router(feedback_router)
 app.include_router(adapters_router)
 app.include_router(datasets_router)
 app.include_router(experiments_router)
@@ -60,3 +62,7 @@ app.include_router(ab_tests_router)
 app.include_router(jobs_router)
 app.include_router(logs_router)
 app.include_router(metrics_router)
+# New feedback system (industry standard)
+app.include_router(ratings_router)
+app.include_router(preferences_router)
+app.include_router(tags_router)

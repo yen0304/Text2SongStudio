@@ -1,10 +1,14 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { feedbackApi, FeedbackStats } from '@/lib/api';
+import { ratingsApi, RatingStats } from '@/lib/api';
 
+/**
+ * Hook to fetch rating statistics for the dashboard
+ * Uses the new RLHF ratings API
+ */
 export function useFeedbackStats() {
-  const [stats, setStats] = useState<FeedbackStats | null>(null);
+  const [stats, setStats] = useState<RatingStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -12,7 +16,7 @@ export function useFeedbackStats() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await feedbackApi.getStats();
+      const response = await ratingsApi.getStats();
       setStats(response);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch feedback stats'));

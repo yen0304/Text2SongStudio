@@ -8,9 +8,9 @@ import { Loader2 } from 'lucide-react';
 
 function FeedbackHistoryContent() {
   const searchParams = useSearchParams();
-  const jobId = searchParams.get('job_id') || undefined;
+  const audioId = searchParams.get('audio_id') || undefined;
 
-  return <FeedbackHistory initialJobId={jobId} />;
+  return <FeedbackHistory initialAudioId={audioId} />;
 }
 
 export default function FeedbackPage() {

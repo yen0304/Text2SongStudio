@@ -6,20 +6,19 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { experimentsApi, ExperimentDetail, ExperimentRun } from '@/lib/api';
+import { experimentsApi, datasetsApi, ExperimentDetail, ExperimentRun, Dataset } from '@/lib/api';
 import { RunComparison } from '@/components/comparison/RunComparison';
 import { TrainingLogViewer } from '@/components/training/TrainingLogViewer';
 import {
   Loader2,
   ArrowLeft,
-  Play,
   CheckCircle,
   XCircle,
   Clock,
-  AlertCircle,
   Plus,
   GitCompare,
   Terminal,
+  Database,
   X,
 } from 'lucide-react';
 
@@ -28,7 +27,7 @@ const runStatusConfig: Record<string, { icon: React.ReactNode; color: string; la
   running: { icon: <Loader2 size={14} className="animate-spin" />, color: 'bg-blue-500/10 text-blue-600', label: 'Running' },
   completed: { icon: <CheckCircle size={14} />, color: 'bg-green-500/10 text-green-600', label: 'Completed' },
   failed: { icon: <XCircle size={14} />, color: 'bg-red-500/10 text-red-600', label: 'Failed' },
-  cancelled: { icon: <AlertCircle size={14} />, color: 'bg-gray-500/10 text-gray-600', label: 'Cancelled' },
+  cancelled: { icon: <XCircle size={14} />, color: 'bg-gray-500/10 text-gray-600', label: 'Cancelled' },
 };
 
 function formatDuration(start: string | null, end: string | null): string {
@@ -50,11 +49,17 @@ export default function ExperimentDetailPage() {
   const experimentId = params.id as string;
   
   const [experiment, setExperiment] = useState<ExperimentDetail | null>(null);
+  const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [loading, setLoading] = useState(true);
   const [startingRun, setStartingRun] = useState(false);
   const [selectedRuns, setSelectedRuns] = useState<string[]>([]);
   const [showComparison, setShowComparison] = useState(false);
-  const [viewingLogsRun, setViewingLogsRun] = useState<ExperimentRun | null>(null);
+  const [viewingLogsRunId, setViewingLogsRunId] = useState<string | null>(null);
+
+  // Get the current run data from experiment (for real-time status updates)
+  const viewingLogsRun = viewingLogsRunId 
+    ? experiment?.runs.find(r => r.id === viewingLogsRunId) || null 
+    : null;
 
   const fetchExperiment = async () => {
     try {
@@ -67,17 +72,45 @@ export default function ExperimentDetailPage() {
     }
   };
 
+  const fetchDatasets = async () => {
+    try {
+      const data = await datasetsApi.list();
+      setDatasets(data.items);
+    } catch (error) {
+      console.error('Failed to fetch datasets:', error);
+    }
+  };
+
   useEffect(() => {
     fetchExperiment();
+    fetchDatasets();
   }, [experimentId]);
+
+  // Poll for updates when there are running runs
+  useEffect(() => {
+    if (!experiment) return;
+    
+    const hasActiveRuns = experiment.runs.some(
+      run => run.status === 'running' || run.status === 'pending'
+    );
+    
+    // Poll every 2 seconds when there are active runs
+    const intervalId = setInterval(() => {
+      fetchExperiment();
+    }, hasActiveRuns ? 2000 : 30000);  // Fast poll when active, slow poll otherwise
+    
+    return () => clearInterval(intervalId);
+  }, [experiment?.id, experiment?.runs.map(r => r.status).join(',')]);
 
   const handleStartRun = async () => {
     setStartingRun(true);
     try {
       await experimentsApi.createRun(experimentId);
-      fetchExperiment();
+      // Refresh to show new run
+      await fetchExperiment();
     } catch (error) {
       console.error('Failed to start run:', error);
+      alert(`Failed to start run: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setStartingRun(false);
     }
@@ -166,6 +199,23 @@ export default function ExperimentDetailPage() {
         </Card>
       </div>
 
+      {/* Dataset Section */}
+      <Card>
+        <CardContent className="py-4">
+          <div className="flex items-center gap-3">
+            <Database className="text-muted-foreground" size={20} />
+            <div>
+              <p className="font-medium">
+                Dataset: {datasets.find(d => d.id === experiment.dataset_id)?.name || experiment.dataset_id}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                This dataset is used for all training runs in this experiment.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Runs Table */}
       <Card>
         <CardHeader>
@@ -240,10 +290,17 @@ export default function ExperimentDetailPage() {
                         )}
                       </td>
                       <td className="p-4">
-                        <Badge variant="secondary" className={config.color}>
-                          {config.icon}
-                          <span className="ml-1">{config.label}</span>
-                        </Badge>
+                        <div className="flex flex-col gap-1">
+                          <Badge variant="secondary" className={config.color}>
+                            {config.icon}
+                            <span className="ml-1">{config.label}</span>
+                          </Badge>
+                          {run.error && (
+                            <span className="text-xs text-red-500 max-w-[200px] truncate" title={run.error}>
+                              {run.error}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-4">
                         {run.final_loss !== null ? run.final_loss.toFixed(4) : '-'}
@@ -266,7 +323,7 @@ export default function ExperimentDetailPage() {
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setViewingLogsRun(run);
+                            setViewingLogsRunId(run.id);
                           }}
                           className="text-muted-foreground hover:text-foreground"
                         >
@@ -302,7 +359,7 @@ export default function ExperimentDetailPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setViewingLogsRun(null)}
+                onClick={() => setViewingLogsRunId(null)}
               >
                 <X size={16} />
               </Button>

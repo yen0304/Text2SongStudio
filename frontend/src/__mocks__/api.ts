@@ -3,14 +3,17 @@ import type {
   Prompt,
   AudioSample,
   GenerationJob,
-  Feedback,
   Adapter,
   Dataset,
   DatasetExport,
   DatasetStats,
-  FeedbackStats,
-  FeedbackListResponse,
   JobFeedbackResponse,
+  QualityRating,
+  PreferencePair,
+  AudioTag,
+  RatingStats,
+  PreferenceStats,
+  TagStats,
 } from '@/lib/api';
 
 // Mock data factories
@@ -51,14 +54,35 @@ export const createMockPrompt = (overrides?: Partial<Prompt>): Prompt => ({
   ...overrides,
 });
 
-export const createMockFeedback = (overrides?: Partial<Feedback>): Feedback => ({
-  id: 'feedback-1',
+export const createMockRating = (overrides?: Partial<QualityRating>): QualityRating => ({
+  id: 'rating-1',
   audio_id: 'audio-1',
+  user_id: null,
   rating: 4,
-  rating_criterion: 'overall',
-  preferred_over: undefined,
-  tags: ['good_melody'],
+  criterion: 'overall',
   notes: 'Nice melody',
+  created_at: '2024-01-01T00:00:00Z',
+  ...overrides,
+});
+
+export const createMockPreference = (overrides?: Partial<PreferencePair>): PreferencePair => ({
+  id: 'preference-1',
+  prompt_id: 'prompt-1',
+  chosen_audio_id: 'audio-1',
+  rejected_audio_id: 'audio-2',
+  user_id: null,
+  margin: null,
+  notes: 'Better rhythm',
+  created_at: '2024-01-01T00:00:00Z',
+  ...overrides,
+});
+
+export const createMockTag = (overrides?: Partial<AudioTag>): AudioTag => ({
+  id: 'tag-1',
+  audio_id: 'audio-1',
+  user_id: null,
+  tag: 'good_melody',
+  is_positive: true,
   created_at: '2024-01-01T00:00:00Z',
   ...overrides,
 });
@@ -112,19 +136,66 @@ export const mockGenerationApi = {
   deleteJob: vi.fn().mockResolvedValue({ status: 'deleted', job_id: 'job-1' }),
 };
 
-/** Mock Feedback API */
-export const mockFeedbackApi = {
-  submit: vi.fn().mockResolvedValue(createMockFeedback()),
-  get: vi.fn().mockResolvedValue([createMockFeedback()]),
-  list: vi.fn().mockResolvedValue({ items: [createMockFeedback()], total: 1 } as FeedbackListResponse),
-  delete: vi.fn().mockResolvedValue({ status: 'deleted', feedback_id: 'feedback-1' }),
+/** Mock Ratings API (SFT Training) */
+export const mockRatingsApi = {
+  submit: vi.fn().mockResolvedValue(createMockRating()),
+  get: vi.fn().mockResolvedValue(createMockRating()),
+  list: vi.fn().mockResolvedValue({ items: [createMockRating()], total: 1 }),
+  getForAudio: vi.fn().mockResolvedValue({ items: [createMockRating()], total: 1 }),
+  delete: vi.fn().mockResolvedValue({ status: 'deleted', id: 'rating-1' }),
   getStats: vi.fn().mockResolvedValue({
-    total_feedback: 100,
-    total_ratings: 80,
-    total_preferences: 20,
+    audio_id: null,
+    total_ratings: 100,
+    average_rating: 3.8,
+    rating_by_criterion: {
+      overall: 3.8,
+      melody: 4.0,
+      rhythm: 3.5,
+      harmony: 3.7,
+      coherence: 3.9,
+      creativity: 4.1,
+      adherence: 3.6,
+    },
     rating_distribution: { 1: 10, 2: 15, 3: 25, 4: 30, 5: 20 },
-    high_rated_samples: 50,
-  } as FeedbackStats),
+  } as RatingStats),
+};
+
+/** Mock Preferences API (DPO/RLHF Training) */
+export const mockPreferencesApi = {
+  submit: vi.fn().mockResolvedValue(createMockPreference()),
+  get: vi.fn().mockResolvedValue(createMockPreference()),
+  list: vi.fn().mockResolvedValue({ items: [createMockPreference()], total: 1 }),
+  getForPrompt: vi.fn().mockResolvedValue({ items: [createMockPreference()], total: 1 }),
+  delete: vi.fn().mockResolvedValue({ status: 'deleted', id: 'preference-1' }),
+  getStats: vi.fn().mockResolvedValue({
+    total_pairs: 50,
+    unique_prompts: 30,
+    unique_audios: 20,
+    average_margin: 2.5,
+    audio_win_rates: null,
+  } as PreferenceStats),
+};
+
+/** Mock Tags API */
+export const mockTagsApi = {
+  add: vi.fn().mockResolvedValue(createMockTag()),
+  addBulk: vi.fn().mockResolvedValue({ created: 3 }),
+  remove: vi.fn().mockResolvedValue({ status: 'deleted' }),
+  getForAudio: vi.fn().mockResolvedValue({ items: [createMockTag()], total: 1 }),
+  update: vi.fn().mockResolvedValue({ tags: ['good_melody'] }),
+  getAvailable: vi.fn().mockResolvedValue({
+    positive: ['good_melody', 'creative'],
+    negative: ['distorted', 'repetitive'],
+    all: ['good_melody', 'creative', 'distorted', 'repetitive'],
+  }),
+  getStats: vi.fn().mockResolvedValue({
+    total_tags: 100,
+    positive_count: 60,
+    negative_count: 40,
+    tag_frequency: { good_melody: 40, creative: 30 },
+    top_positive_tags: [['good_melody', 40], ['creative', 30]],
+    top_negative_tags: [['distorted', 20], ['repetitive', 15]],
+  } as TagStats),
 };
 
 /** Mock Adapters API */
@@ -215,7 +286,9 @@ export const mockMetricsApi = {
 export const promptsApi = mockPromptsApi;
 export const audioApi = mockAudioApi;
 export const generationApi = mockGenerationApi;
-export const feedbackApi = mockFeedbackApi;
+export const ratingsApi = mockRatingsApi;
+export const preferencesApi = mockPreferencesApi;
+export const tagsApi = mockTagsApi;
 export const adaptersApi = mockAdaptersApi;
 export const datasetsApi = mockDatasetsApi;
 export const experimentsApi = mockExperimentsApi;
@@ -228,7 +301,9 @@ export function resetModularMocks() {
     mockPromptsApi,
     mockAudioApi,
     mockGenerationApi,
-    mockFeedbackApi,
+    mockRatingsApi,
+    mockPreferencesApi,
+    mockTagsApi,
     mockAdaptersApi,
     mockDatasetsApi,
     mockExperimentsApi,

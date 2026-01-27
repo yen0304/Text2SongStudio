@@ -38,6 +38,7 @@ export default function DatasetsPage() {
     name: '',
     description: '',
     type: 'supervised' as 'supervised' | 'preference',
+    minRating: 4, // Default minimum rating for quality filtering
   });
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [stats, setStats] = useState<Record<string, DatasetStats>>({});
@@ -90,9 +91,12 @@ export default function DatasetsPage() {
         name: newDataset.name,
         description: newDataset.description || undefined,
         type: newDataset.type,
+        filter_query: newDataset.type === 'supervised' ? {
+          min_rating: newDataset.minRating,
+        } : undefined,
       });
       setShowCreateForm(false);
-      setNewDataset({ name: '', description: '', type: 'supervised' });
+      setNewDataset({ name: '', description: '', type: 'supervised', minRating: 4 });
       fetchDatasets();
     } catch (error) {
       console.error('Failed to create dataset:', error);
@@ -210,6 +214,33 @@ export default function DatasetsPage() {
                   />
                 </div>
               </div>
+              
+              {/* Filter Settings */}
+              {newDataset.type === 'supervised' && (
+                <div className="border-t pt-4 mt-4">
+                  <h4 className="text-sm font-medium mb-3">Filter Settings</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Minimum Rating</label>
+                      <select
+                        className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                        value={newDataset.minRating}
+                        onChange={(e) => setNewDataset({ ...newDataset, minRating: Number(e.target.value) })}
+                      >
+                        <option value={1}>1+ (All rated samples)</option>
+                        <option value={2}>2+ (Fair or better)</option>
+                        <option value={3}>3+ (Good or better)</option>
+                        <option value={4}>4+ (Very good or better)</option>
+                        <option value={5}>5 (Excellent only)</option>
+                      </select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Only include samples with at least this rating
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="outline" onClick={() => setShowCreateForm(false)}>
                   Cancel
@@ -265,6 +296,11 @@ export default function DatasetsPage() {
                           {dataset.is_exported && (
                             <Badge variant="secondary" className="bg-green-500/10 text-green-600 text-xs">
                               Exported
+                            </Badge>
+                          )}
+                          {dataset.filter_query?.min_rating && (
+                            <Badge variant="secondary" className="bg-blue-500/10 text-blue-600 text-xs">
+                              Rating ≥ {dataset.filter_query.min_rating}
                             </Badge>
                           )}
                         </div>

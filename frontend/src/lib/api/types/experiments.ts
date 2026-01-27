@@ -59,6 +59,7 @@ export interface CreateExperimentRequest {
 export interface UpdateExperimentRequest {
   name?: string;
   description?: string;
+  dataset_id?: string | null;
   config?: Record<string, unknown>;
 }
 

@@ -1,11 +1,11 @@
 'use client';
 
-import { FeedbackStats } from '@/lib/api';
+import { RatingStats } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 interface TrainingReadinessProps {
-  stats: FeedbackStats | null;
+  stats: RatingStats | null;
   isLoading: boolean;
   onCreateDataset: () => void;
 }
@@ -23,7 +23,9 @@ export function TrainingReadiness({ stats, isLoading, onCreateDataset }: Trainin
     );
   }
 
-  const highRatedCount = stats?.high_rated_samples || 0;
+  // Calculate high-rated count from rating_distribution (4+ stars)
+  const distribution = stats?.rating_distribution || {};
+  const highRatedCount = (distribution[4] || 0) + (distribution[5] || 0);
   const progress = Math.min((highRatedCount / MIN_SAMPLES_FOR_TRAINING) * 100, 100);
   const isReady = highRatedCount >= MIN_SAMPLES_FOR_TRAINING;
 

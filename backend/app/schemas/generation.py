@@ -51,6 +51,7 @@ class SampleFeedbackGroup(BaseModel):
     feedback: list[SampleFeedbackItem]
     average_rating: float | None = None
     feedback_count: int = 0
+    tags: list[str] | None = None  # Audio tags from AudioTag table
 
 
 class JobFeedbackResponse(BaseModel):

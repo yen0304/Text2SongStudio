@@ -6,12 +6,14 @@ from app.database import get_db
 from app.models import (
     Adapter,
     AudioSample,
+    AudioTag,
     Dataset,
     Experiment,
     ExperimentStatus,
-    Feedback,
     GenerationJob,
     JobStatus,
+    PreferencePair,
+    QualityRating,
 )
 
 router = APIRouter(prefix="/metrics", tags=["metrics"])
@@ -42,16 +44,22 @@ async def get_overview_metrics(
     # Audio samples
     total_samples = await db.scalar(select(func.count()).select_from(AudioSample)) or 0
 
-    # Feedback stats
-    total_feedback = await db.scalar(select(func.count()).select_from(Feedback)) or 0
+    # Feedback stats - use new tables
+    total_ratings = (
+        await db.scalar(select(func.count()).select_from(QualityRating)) or 0
+    )
+    total_preferences = (
+        await db.scalar(select(func.count()).select_from(PreferencePair)) or 0
+    )
+    total_tags = await db.scalar(select(func.count()).select_from(AudioTag)) or 0
+    total_feedback = total_ratings + total_preferences + total_tags
+
     rated_samples = (
-        await db.scalar(select(func.count(func.distinct(Feedback.audio_id)))) or 0
+        await db.scalar(select(func.count(func.distinct(QualityRating.audio_id)))) or 0
     )
 
     # Calculate average rating
-    avg_rating = await db.scalar(
-        select(func.avg(Feedback.rating)).where(Feedback.rating.isnot(None))
-    )
+    avg_rating = await db.scalar(select(func.avg(QualityRating.rating)))
 
     # Samples needing feedback (generated but not rated)
     pending_feedback = total_samples - rated_samples
@@ -117,22 +125,27 @@ async def get_feedback_metrics(
     db: AsyncSession = Depends(get_db),
 ):
     """Get detailed feedback distribution metrics."""
-    # Rating distribution
+    # Rating distribution from quality_ratings
     rating_dist = {}
     for rating in range(1, 6):
         count = (
-            await db.scalar(select(func.count()).where(Feedback.rating == rating)) or 0
+            await db.scalar(
+                select(func.count()).where(
+                    QualityRating.rating >= rating, QualityRating.rating < rating + 1
+                )
+            )
+            or 0
         )
         rating_dist[rating] = count
 
-    # Feedback by adapter
+    # Ratings by adapter
     adapter_feedback = await db.execute(
         select(
             AudioSample.adapter_id,
-            func.count(Feedback.id).label("count"),
-            func.avg(Feedback.rating).label("avg_rating"),
+            func.count(QualityRating.id).label("count"),
+            func.avg(QualityRating.rating).label("avg_rating"),
         )
-        .join(Feedback, Feedback.audio_id == AudioSample.id)
+        .join(QualityRating, QualityRating.audio_id == AudioSample.id)
         .group_by(AudioSample.adapter_id)
     )
 
@@ -156,20 +169,19 @@ async def get_feedback_metrics(
             }
         )
 
-    # Preference feedback count
+    # Preference pairs count
     preference_count = (
-        await db.scalar(select(func.count()).where(Feedback.preferred_over.isnot(None)))
-        or 0
+        await db.scalar(select(func.count()).select_from(PreferencePair)) or 0
     )
 
-    # Total with tags
+    # Total tagged audio
     tagged_count = (
-        await db.scalar(select(func.count()).where(Feedback.tags.isnot(None))) or 0
+        await db.scalar(select(func.count(func.distinct(AudioTag.audio_id)))) or 0
     )
 
     return {
         "rating_distribution": rating_dist,
         "by_adapter": by_adapter,
         "preference_comparisons": preference_count,
-        "tagged_feedback": tagged_count,
+        "tagged_audio": tagged_count,
     }

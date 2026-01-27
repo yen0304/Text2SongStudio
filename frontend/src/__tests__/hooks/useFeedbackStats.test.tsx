@@ -5,17 +5,17 @@ import { useFeedbackStats } from '@/hooks/useFeedbackStats';
 // Mock the api module with modular APIs
 const mockGetStats = vi.fn();
 vi.mock('@/lib/api', () => ({
-  feedbackApi: {
+  ratingsApi: {
     getStats: (...args: unknown[]) => mockGetStats(...args),
   },
 }));
 
 const mockStats = {
-  total_feedback: 100,
-  total_ratings: 80,
-  total_preferences: 20,
+  total_ratings: 100,
+  average_rating: 3.8,
   rating_distribution: { 1: 10, 2: 15, 3: 25, 4: 30, 5: 20 },
-  high_rated_samples: 50,
+  high_quality_samples: 50,
+  by_criterion: {},
 };
 
 describe('useFeedbackStats', () => {
@@ -33,7 +33,7 @@ describe('useFeedbackStats', () => {
     expect(result.current.error).toBeNull();
   });
 
-  it('fetches feedback stats on mount', async () => {
+  it('fetches rating stats on mount', async () => {
     mockGetStats.mockResolvedValue(mockStats);
 
     const { result } = renderHook(() => useFeedbackStats());
@@ -67,8 +67,8 @@ describe('useFeedbackStats', () => {
   });
 
   it('provides refresh function that refetches data', async () => {
-    const initialStats = { ...mockStats, total_feedback: 100 };
-    const updatedStats = { ...mockStats, total_feedback: 150 };
+    const initialStats = { ...mockStats, total_ratings: 100 };
+    const updatedStats = { ...mockStats, total_ratings: 150 };
     
     mockGetStats
       .mockResolvedValueOnce(initialStats)
@@ -77,11 +77,11 @@ describe('useFeedbackStats', () => {
     const { result } = renderHook(() => useFeedbackStats());
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.stats?.total_feedback).toBe(100);
+    expect(result.current.stats?.total_ratings).toBe(100);
 
     // Call refresh
     await result.current.refresh();
 
-    await waitFor(() => expect(result.current.stats?.total_feedback).toBe(150));
+    await waitFor(() => expect(result.current.stats?.total_ratings).toBe(150));
   });
 });

@@ -6,30 +6,25 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { feedbackApi } from '@/lib/api';
+import { ratingsApi, preferencesApi, tagsApi } from '@/lib/api';
+import { POSITIVE_TAGS, NEGATIVE_TAGS } from '@/lib/api/types/tags';
 import { Star, X, ThumbsUp, Check, Tag, MessageSquare } from 'lucide-react';
 
 interface FeedbackPanelProps {
   audioIds: string[];
+  promptId?: string | null;  // Required for preferences
   onFeedbackSubmitted?: () => void;
 }
 
+// Combine positive and negative tags for display
 const SUGGESTED_TAGS = [
-  'good_melody',
-  'good_rhythm',
-  'good_harmony',
-  'creative',
-  'professional',
-  'poor_melody',
-  'poor_rhythm',
-  'repetitive',
-  'noisy',
-  'artifacts',
+  ...POSITIVE_TAGS.slice(0, 5),  // good_melody, good_rhythm, good_harmony, creative, unique
+  ...NEGATIVE_TAGS.slice(0, 5),  // bad, noisy, distorted, off_key, off_beat
 ];
 
 const SAMPLE_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
 
-export function FeedbackPanel({ audioIds, onFeedbackSubmitted }: FeedbackPanelProps) {
+export function FeedbackPanel({ audioIds, promptId, onFeedbackSubmitted }: FeedbackPanelProps) {
   // Selected sample for rating/tags
   const [selectedAudioId, setSelectedAudioId] = useState<string>(audioIds[0] || '');
   
@@ -72,9 +67,10 @@ export function FeedbackPanel({ audioIds, onFeedbackSubmitted }: FeedbackPanelPr
     if (!rating) return;
     setIsSubmitting(true);
     try {
-      await feedbackApi.submit({
+      await ratingsApi.submit({
         audio_id: selectedAudioId,
         rating,
+        criterion: 'overall',
         notes: notes || undefined,
       });
       setLastSubmitted('rating');
@@ -90,15 +86,16 @@ export function FeedbackPanel({ audioIds, onFeedbackSubmitted }: FeedbackPanelPr
   };
 
   const handleSubmitPreference = async () => {
-    if (!preferredId) return;
+    if (!preferredId || !promptId) return;
     const rejectedId = audioIds.find((id) => id !== preferredId);
     if (!rejectedId) return;
     
     setIsSubmitting(true);
     try {
-      await feedbackApi.submit({
-        audio_id: preferredId,
-        preferred_over: rejectedId,
+      await preferencesApi.submit({
+        prompt_id: promptId,
+        chosen_audio_id: preferredId,
+        rejected_audio_id: rejectedId,
         notes: notes || undefined,
       });
       setLastSubmitted('preference');
@@ -117,10 +114,18 @@ export function FeedbackPanel({ audioIds, onFeedbackSubmitted }: FeedbackPanelPr
     if (tags.length === 0) return;
     setIsSubmitting(true);
     try {
-      await feedbackApi.submit({
-        audio_id: selectedAudioId,
-        tags,
-        notes: notes || undefined,
+      // Separate tags into positive and negative based on predefined lists
+      const positiveTags = tags.filter(t => 
+        POSITIVE_TAGS.includes(t as typeof POSITIVE_TAGS[number]) || 
+        !NEGATIVE_TAGS.includes(t as typeof NEGATIVE_TAGS[number])
+      );
+      const negativeTags = tags.filter(t => 
+        NEGATIVE_TAGS.includes(t as typeof NEGATIVE_TAGS[number])
+      );
+      
+      await tagsApi.replaceForAudio(selectedAudioId, {
+        positive_tags: positiveTags,
+        negative_tags: negativeTags,
       });
       setLastSubmitted('tags');
       setTags([]);
@@ -222,8 +227,8 @@ export function FeedbackPanel({ audioIds, onFeedbackSubmitted }: FeedbackPanelPr
           </Button>
         </div>
 
-        {/* Section 2: A/B Preference */}
-        {audioIds.length >= 2 && (
+        {/* Section 2: A/B Preference - only show when promptId is available */}
+        {audioIds.length >= 2 && promptId && (
           <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
             <div className="flex items-center justify-between">
               <h3 className="font-medium flex items-center gap-2">

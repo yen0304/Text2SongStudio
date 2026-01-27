@@ -21,3 +21,6 @@ class Prompt(Base):
     audio_samples = relationship(
         "AudioSample", back_populates="prompt", lazy="selectin"
     )
+    preference_pairs = relationship(
+        "PreferencePair", back_populates="prompt", lazy="selectin"
+    )

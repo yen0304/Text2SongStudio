@@ -26,6 +26,8 @@ dependencies = [
     "soundfile>=0.12.0",
     "numpy>=1.24.0",
     "greenlet>=3.3.1",
+    # Training dependencies (for model.training module)
+    "tqdm>=4.65.0",
 ]
 
 [build-system]
@@ -75,6 +77,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["PLC0415"]  # Allow imports inside test functions for lazy loading and mocking
+"model/training/cli.py" = ["PLC0415"]  # Allow lazy imports for heavy modules (torch, httpx)
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]

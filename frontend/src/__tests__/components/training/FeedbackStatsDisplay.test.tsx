@@ -1,19 +1,27 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@/test-utils';
 import { FeedbackStatsDisplay } from '@/components/training/FeedbackStatsDisplay';
-import { FeedbackStats } from '@/lib/api';
+import { RatingStats } from '@/lib/api';
 
-const mockStats: FeedbackStats = {
-  total_feedback: 150,
+const mockStats: RatingStats = {
+  audio_id: null,
   total_ratings: 100,
-  total_preferences: 50,
-  high_rated_samples: 75,
+  average_rating: 3.8,
+  rating_by_criterion: {
+    overall: 3.8,
+    melody: 4.0,
+    rhythm: 3.5,
+    harmony: 3.7,
+    coherence: 3.9,
+    creativity: 4.1,
+    adherence: 3.6,
+  },
   rating_distribution: {
-    '1': 5,
-    '2': 10,
-    '3': 25,
-    '4': 35,
-    '5': 25,
+    1: 5,
+    2: 10,
+    3: 25,
+    4: 35,
+    5: 25,
   },
 };
 
@@ -26,8 +34,8 @@ describe('FeedbackStatsDisplay', () => {
       />
     );
     
-    expect(screen.getByText('150')).toBeInTheDocument();
-    expect(screen.getByText('Total Feedback')).toBeInTheDocument();
+    expect(screen.getByText('100')).toBeInTheDocument();
+    expect(screen.getByText('Total Ratings')).toBeInTheDocument();
   });
 
   it('shows loading state', () => {
@@ -62,9 +70,8 @@ describe('FeedbackStatsDisplay', () => {
       />
     );
     
-    expect(screen.getByText('Total Feedback')).toBeInTheDocument();
-    expect(screen.getByText('Ratings')).toBeInTheDocument();
-    expect(screen.getByText('Preferences')).toBeInTheDocument();
+    expect(screen.getByText('Total Ratings')).toBeInTheDocument();
+    expect(screen.getByText('Average Rating')).toBeInTheDocument();
     expect(screen.getByText('High Rated (4+)')).toBeInTheDocument();
   });
 
@@ -76,10 +83,10 @@ describe('FeedbackStatsDisplay', () => {
       />
     );
     
-    expect(screen.getByText('150')).toBeInTheDocument();
     expect(screen.getByText('100')).toBeInTheDocument();
-    expect(screen.getByText('50')).toBeInTheDocument();
-    expect(screen.getByText('75')).toBeInTheDocument();
+    expect(screen.getByText('3.8')).toBeInTheDocument();
+    // High rated = 35 + 25 = 60
+    expect(screen.getByText('60')).toBeInTheDocument();
   });
 
   it('renders rating distribution chart', () => {
@@ -116,14 +123,14 @@ describe('FeedbackStatsDisplay', () => {
   });
 
   it('handles zero values in rating distribution', () => {
-    const statsWithZeros: FeedbackStats = {
+    const statsWithZeros: RatingStats = {
       ...mockStats,
       rating_distribution: {
-        '1': 0,
-        '2': 0,
-        '3': 10,
-        '4': 20,
-        '5': 30,
+        1: 0,
+        2: 0,
+        3: 10,
+        4: 20,
+        5: 30,
       },
     };
     
@@ -139,14 +146,14 @@ describe('FeedbackStatsDisplay', () => {
   });
 
   it('handles empty rating distribution', () => {
-    const statsEmptyDistribution: FeedbackStats = {
+    const statsEmptyDistribution: RatingStats = {
       ...mockStats,
       rating_distribution: {
-        '1': 0,
-        '2': 0,
-        '3': 0,
-        '4': 0,
-        '5': 0,
+        1: 0,
+        2: 0,
+        3: 0,
+        4: 0,
+        5: 0,
       },
     };
     

@@ -9,10 +9,14 @@ export * from './common';
 export * from './prompts';
 export * from './audio';
 export * from './generation';
-export * from './feedback';
 export * from './adapters';
 export * from './datasets';
 export * from './experiments';
 export * from './ab-tests';
 export * from './metrics';
 export * from './logs';
+
+// New feedback types (industry standard RLHF)
+export * from './ratings';
+export * from './preferences';
+export * from './tags';

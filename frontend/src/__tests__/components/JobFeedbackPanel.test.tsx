@@ -4,13 +4,17 @@ import { JobFeedbackPanel } from '@/components/JobFeedbackPanel';
 
 // Mock the api module with modular APIs
 const mockGetJobFeedback = vi.fn();
-const mockDeleteFeedback = vi.fn();
+const mockDeleteRating = vi.fn();
+const mockDeletePreference = vi.fn();
 vi.mock('@/lib/api', () => ({
   generationApi: {
     getJobFeedback: (...args: unknown[]) => mockGetJobFeedback(...args),
   },
-  feedbackApi: {
-    delete: (...args: unknown[]) => mockDeleteFeedback(...args),
+  ratingsApi: {
+    delete: (...args: unknown[]) => mockDeleteRating(...args),
+  },
+  preferencesApi: {
+    delete: (...args: unknown[]) => mockDeletePreference(...args),
   },
 }));
 

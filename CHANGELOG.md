@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Feedback System Refactoring to RLHF Industry Standard** (2026-01-26)
+  - New `quality_ratings` table for Supervised Fine-Tuning (SFT) data
+  - New `preference_pairs` table for Direct Preference Optimization (DPO) with same-prompt enforcement
+  - New `audio_tags` table for flexible filtering and categorization
+  - New API endpoints: `/ratings`, `/preferences`, `/tags`
+  - Frontend API modules: `ratingsApi`, `preferencesApi`, `tagsApi`
+  - Alembic migration with automatic data migration from legacy `feedback` table
+  - Dockerfile updated to run migrations automatically on startup
 - **Backend Testing Infrastructure** (2025-01-25)
   - Comprehensive test suite with 243 tests achieving 60.94% coverage (target: 50%)
   - Schema tests for all Pydantic models (prompt, feedback, adapter, dataset, experiment, generation)
@@ -42,7 +50,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Route changes: `/` → `/overview`, original homepage → `/generate`, `/training` → `/datasets`
 
 ### Deprecated
-- N/A
+- `feedbackApi` module - Use `ratingsApi`, `preferencesApi`, and `tagsApi` instead
+- `/feedback` API endpoint - Use `/ratings`, `/preferences`, `/tags` endpoints instead
+- `Feedback` model pointing to `feedback_legacy` table - Use new models instead
 
 ### Removed
 - N/A

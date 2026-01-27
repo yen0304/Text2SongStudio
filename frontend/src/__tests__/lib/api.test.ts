@@ -73,22 +73,22 @@ describe('Modular API', () => {
     });
   });
 
-  describe('feedbackApi', () => {
+  describe('ratingsApi', () => {
     it('submit sends correct payload', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ id: 'feedback-1' }),
+        json: () => Promise.resolve({ id: 'rating-1' }),
       });
 
-      const { feedbackApi } = await import('@/lib/api');
-      await feedbackApi.submit({
+      const { ratingsApi } = await import('@/lib/api');
+      await ratingsApi.submit({
         audio_id: 'audio-1',
         rating: 5,
-        tags: ['good'],
+        criterion: 'overall',
       });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/feedback'),
+        expect.stringContaining('/ratings'),
         expect.objectContaining({
           method: 'POST',
           body: expect.stringContaining('audio_id'),
@@ -102,8 +102,8 @@ describe('Modular API', () => {
         json: () => Promise.resolve({ items: [], total: 0 }),
       });
 
-      const { feedbackApi } = await import('@/lib/api');
-      await feedbackApi.list({ audio_id: 'audio-1', min_rating: 3 });
+      const { ratingsApi } = await import('@/lib/api');
+      await ratingsApi.list({ audio_id: 'audio-1', min_rating: 3 });
 
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringMatching(/audio_id=audio-1.*min_rating=3|min_rating=3.*audio_id=audio-1/),
@@ -112,16 +112,40 @@ describe('Modular API', () => {
     });
 
     it('getStats returns stats data', async () => {
-      const mockStats = { total: 100, average_rating: 4.2 };
+      const mockStats = { total_ratings: 100, average_rating: 4.2 };
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve(mockStats),
       });
 
-      const { feedbackApi } = await import('@/lib/api');
-      const result = await feedbackApi.getStats();
+      const { ratingsApi } = await import('@/lib/api');
+      const result = await ratingsApi.getStats();
 
       expect(result).toEqual(mockStats);
+    });
+  });
+
+  describe('preferencesApi', () => {
+    it('submit sends correct payload', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ id: 'preference-1' }),
+      });
+
+      const { preferencesApi } = await import('@/lib/api');
+      await preferencesApi.submit({
+        prompt_id: 'prompt-1',
+        chosen_audio_id: 'audio-1',
+        rejected_audio_id: 'audio-2',
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/preferences'),
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.stringContaining('chosen_audio_id'),
+        })
+      );
     });
   });
 
@@ -289,7 +313,9 @@ describe('Modular API', () => {
       expect(apiModule.promptsApi).toBeDefined();
       expect(apiModule.audioApi).toBeDefined();
       expect(apiModule.generationApi).toBeDefined();
-      expect(apiModule.feedbackApi).toBeDefined();
+      expect(apiModule.ratingsApi).toBeDefined();
+      expect(apiModule.preferencesApi).toBeDefined();
+      expect(apiModule.tagsApi).toBeDefined();
       expect(apiModule.adaptersApi).toBeDefined();
       expect(apiModule.datasetsApi).toBeDefined();
       expect(apiModule.experimentsApi).toBeDefined();

@@ -6,7 +6,15 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Adapter, Feedback, GenerationJob, JobStatus, Prompt
+from app.models import (
+    Adapter,
+    AudioTag,
+    GenerationJob,
+    JobStatus,
+    PreferencePair,
+    Prompt,
+    QualityRating,
+)
 from app.services.generation import GenerationService
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
@@ -262,9 +270,19 @@ async def delete_job(
         job.status = JobStatus.CANCELLED
         GenerationService.cancel_job(job_id)
 
-    # Delete associated feedback (cascade)
+    # Delete associated feedback from new tables (cascade)
     if job.audio_ids:
-        await db.execute(delete(Feedback).where(Feedback.audio_id.in_(job.audio_ids)))
+        await db.execute(
+            delete(QualityRating).where(QualityRating.audio_id.in_(job.audio_ids))
+        )
+        await db.execute(delete(AudioTag).where(AudioTag.audio_id.in_(job.audio_ids)))
+        # Delete preferences where either audio was chosen or rejected
+        await db.execute(
+            delete(PreferencePair).where(
+                (PreferencePair.chosen_id.in_(job.audio_ids))
+                | (PreferencePair.rejected_id.in_(job.audio_ids))
+            )
+        )
 
     # Soft-delete the job
     job.deleted_at = datetime.utcnow()

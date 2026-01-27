@@ -5,21 +5,25 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { feedbackApi, type Feedback, type FeedbackListResponse } from '@/lib/api';
-import { Star, ThumbsUp, MessageSquare, Loader2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { 
+  ratingsApi, 
+  type QualityRating, 
+  type RatingListResponse 
+} from '@/lib/api';
+import { Star, Loader2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface FeedbackHistoryProps {
-  initialJobId?: string;
+  initialAudioId?: string;
 }
 
-export function FeedbackHistory({ initialJobId }: FeedbackHistoryProps) {
-  const [feedback, setFeedback] = useState<Feedback[]>([]);
+export function FeedbackHistory({ initialAudioId }: FeedbackHistoryProps) {
+  const [ratings, setRatings] = useState<QualityRating[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Filters
-  const [jobIdFilter, setJobIdFilter] = useState(initialJobId || '');
+  const [audioIdFilter, setAudioIdFilter] = useState(initialAudioId || '');
   const [minRating, setMinRating] = useState<string>('');
   const [page, setPage] = useState(1);
   const limit = 20;
@@ -28,16 +32,16 @@ export function FeedbackHistory({ initialJobId }: FeedbackHistoryProps) {
     setLoading(true);
     setError(null);
     try {
-      const response = await feedbackApi.list({
-        job_id: jobIdFilter || undefined,
+      const response = await ratingsApi.list({
+        audio_id: audioIdFilter || undefined,
         min_rating: minRating ? parseFloat(minRating) : undefined,
         page,
         limit,
       });
-      setFeedback(response.items);
+      setRatings(response.items);
       setTotal(response.total);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load feedback');
+      setError(e instanceof Error ? e.message : 'Failed to load ratings');
     } finally {
       setLoading(false);
     }
@@ -63,13 +67,13 @@ export function FeedbackHistory({ initialJobId }: FeedbackHistoryProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Feedback History</CardTitle>
+        <CardTitle>Rating History</CardTitle>
         <div className="flex flex-wrap gap-3 pt-2">
           <div className="flex items-center gap-2">
             <Input
-              placeholder="Filter by Job ID..."
-              value={jobIdFilter}
-              onChange={(e) => setJobIdFilter(e.target.value)}
+              placeholder="Filter by Audio ID..."
+              value={audioIdFilter}
+              onChange={(e) => setAudioIdFilter(e.target.value)}
               onKeyDown={handleKeyDown}
               className="w-64"
             />
@@ -100,15 +104,15 @@ export function FeedbackHistory({ initialJobId }: FeedbackHistoryProps) {
           </div>
         ) : error ? (
           <p className="text-center text-destructive py-4">{error}</p>
-        ) : feedback.length === 0 ? (
+        ) : ratings.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">
-            No feedback found matching your filters.
+            No ratings found matching your filters.
           </p>
         ) : (
           <>
             <div className="space-y-3">
-              {feedback.map((fb) => (
-                <FeedbackRow key={fb.id} feedback={fb} />
+              {ratings.map((rating) => (
+                <RatingRow key={rating.id} rating={rating} />
               ))}
             </div>
 
@@ -148,65 +152,43 @@ export function FeedbackHistory({ initialJobId }: FeedbackHistoryProps) {
   );
 }
 
-function FeedbackRow({ feedback }: { feedback: Feedback }) {
+function RatingRow({ rating }: { rating: QualityRating }) {
   return (
     <div className="flex items-start gap-4 p-3 bg-muted/30 rounded-lg">
       <div className="flex-1 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
-          {/* Rating */}
-          {feedback.rating !== undefined && feedback.rating !== null && (
-            <div className="flex items-center gap-1">
-              {[1, 2, 3, 4, 5].map((v) => (
-                <Star
-                  key={v}
-                  className={`h-3.5 w-3.5 ${
-                    v <= feedback.rating! ? 'fill-primary text-primary' : 'text-muted-foreground'
-                  }`}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Preference */}
-          {feedback.preferred_over && (
-            <Badge variant="outline" className="text-green-600 border-green-600">
-              <ThumbsUp className="h-3 w-3 mr-1" />
-              Preferred
-            </Badge>
-          )}
+          {/* Rating stars */}
+          <div className="flex items-center gap-1">
+            {[1, 2, 3, 4, 5].map((v) => (
+              <Star
+                key={v}
+                className={`h-3.5 w-3.5 ${
+                  v <= rating.rating ? 'fill-primary text-primary' : 'text-muted-foreground'
+                }`}
+              />
+            ))}
+          </div>
 
           {/* Criterion */}
-          {feedback.rating_criterion && feedback.rating_criterion !== 'overall' && (
+          {rating.criterion && rating.criterion !== 'overall' && (
             <Badge variant="secondary" className="text-xs">
-              {feedback.rating_criterion}
+              {rating.criterion}
             </Badge>
           )}
         </div>
 
-        {/* Tags */}
-        {feedback.tags && feedback.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {feedback.tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="text-xs">
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        )}
-
         {/* Notes */}
-        {feedback.notes && (
-          <div className="flex items-start gap-1.5 text-sm text-muted-foreground">
-            <MessageSquare className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-            <span className="italic">&quot;{feedback.notes}&quot;</span>
-          </div>
+        {rating.notes && (
+          <p className="text-sm text-muted-foreground italic">
+            &quot;{rating.notes}&quot;
+          </p>
         )}
       </div>
 
       {/* Metadata */}
       <div className="text-right text-xs text-muted-foreground shrink-0">
-        <p className="font-mono">{feedback.audio_id.slice(0, 8)}...</p>
-        <p>{new Date(feedback.created_at).toLocaleDateString()}</p>
+        <p className="font-mono">{rating.audio_id.slice(0, 8)}...</p>
+        <p>{new Date(rating.created_at).toLocaleDateString()}</p>
       </div>
     </div>
   );

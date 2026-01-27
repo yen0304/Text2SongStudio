@@ -6,7 +6,15 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Adapter, Feedback, GenerationJob, JobStatus, Prompt
+from app.models import (
+    Adapter,
+    AudioTag,
+    GenerationJob,
+    JobStatus,
+    PreferencePair,
+    Prompt,
+    QualityRating,
+)
 from app.schemas import GenerationJobResponse, GenerationRequest
 from app.schemas.generation import (
     JobFeedbackResponse,
@@ -129,7 +137,13 @@ async def get_job_feedback(
     job_id: UUID,
     db: AsyncSession = Depends(get_db),
 ):
-    """Get all feedback records for a generation job's audio samples."""
+    """Get all feedback records for a generation job's audio samples.
+
+    Combines data from:
+    - QualityRating (ratings with criteria)
+    - PreferencePair (preference comparisons)
+    - AudioTag (tags/labels)
+    """
     # Fetch job
     result = await db.execute(select(GenerationJob).where(GenerationJob.id == job_id))
     job = result.scalar_one_or_none()
@@ -139,55 +153,117 @@ async def get_job_feedback(
 
     audio_ids = job.audio_ids or []
 
-    # Query all feedback for the job's audio samples
-    feedback_list: list[Feedback] = []
-    if audio_ids:
-        feedback_result = await db.execute(
-            select(Feedback)
-            .where(Feedback.audio_id.in_(audio_ids))
-            .order_by(Feedback.created_at.desc())
-        )
-        feedback_list = list(feedback_result.scalars().all())
+    # Query all ratings for the job's audio samples
+    ratings_list: list[QualityRating] = []
+    preferences_list: list[PreferencePair] = []
+    tags_by_audio: dict[UUID, list[str]] = {aid: [] for aid in audio_ids}
 
-    # Group feedback by audio_id
-    feedback_by_audio: dict[UUID, list[Feedback]] = {}
-    for audio_id in audio_ids:
-        feedback_by_audio[audio_id] = []
-    for fb in feedback_list:
-        if fb.audio_id in feedback_by_audio:
-            feedback_by_audio[fb.audio_id].append(fb)
+    if audio_ids:
+        # Get quality ratings
+        ratings_result = await db.execute(
+            select(QualityRating)
+            .where(QualityRating.audio_id.in_(audio_ids))
+            .order_by(QualityRating.created_at.desc())
+        )
+        ratings_list = list(ratings_result.scalars().all())
+
+        # Get preference pairs (where any audio is chosen or rejected)
+        prefs_result = await db.execute(
+            select(PreferencePair)
+            .where(
+                (PreferencePair.chosen_audio_id.in_(audio_ids))
+                | (PreferencePair.rejected_audio_id.in_(audio_ids))
+            )
+            .order_by(PreferencePair.created_at.desc())
+        )
+        preferences_list = list(prefs_result.scalars().all())
+
+        # Get audio tags
+        tags_result = await db.execute(
+            select(AudioTag).where(AudioTag.audio_id.in_(audio_ids))
+        )
+        for tag in tags_result.scalars().all():
+            if tag.audio_id in tags_by_audio:
+                tags_by_audio[tag.audio_id].append(tag.tag)
+
+    # Group ratings by audio_id
+    ratings_by_audio: dict[UUID, list[QualityRating]] = {aid: [] for aid in audio_ids}
+    for rating in ratings_list:
+        if rating.audio_id in ratings_by_audio:
+            ratings_by_audio[rating.audio_id].append(rating)
+
+    # Group preferences by chosen audio_id (to show "preferred over" relationships)
+    prefs_by_chosen: dict[UUID, list[PreferencePair]] = {aid: [] for aid in audio_ids}
+    for pref in preferences_list:
+        if pref.chosen_audio_id in prefs_by_chosen:
+            prefs_by_chosen[pref.chosen_audio_id].append(pref)
 
     # Calculate stats
-    all_ratings = [fb.rating for fb in feedback_list if fb.rating is not None]
+    all_ratings = [r.rating for r in ratings_list]
     average_rating = sum(all_ratings) / len(all_ratings) if all_ratings else None
+    total_feedback = (
+        len(ratings_list)
+        + len(preferences_list)
+        + sum(len(tags) for tags in tags_by_audio.values())
+    )
 
     # Build response
     samples = []
     for idx, audio_id in enumerate(audio_ids):
-        sample_feedback = feedback_by_audio.get(audio_id, [])
-        sample_ratings = [fb.rating for fb in sample_feedback if fb.rating is not None]
+        sample_ratings = ratings_by_audio.get(audio_id, [])
+        sample_prefs = prefs_by_chosen.get(audio_id, [])
+        sample_tags = tags_by_audio.get(audio_id, [])
+
+        sample_rating_values = [r.rating for r in sample_ratings]
         sample_avg = (
-            sum(sample_ratings) / len(sample_ratings) if sample_ratings else None
+            sum(sample_rating_values) / len(sample_rating_values)
+            if sample_rating_values
+            else None
         )
+
+        # Build feedback items from ratings
+        feedback_items = []
+        for r in sample_ratings:
+            feedback_items.append(
+                SampleFeedbackItem(
+                    id=r.id,
+                    rating=r.rating,
+                    rating_criterion=r.criterion,
+                    preferred_over=None,
+                    tags=None,
+                    notes=r.notes,
+                    created_at=r.created_at,
+                )
+            )
+
+        # Build feedback items from preferences
+        for p in sample_prefs:
+            feedback_items.append(
+                SampleFeedbackItem(
+                    id=p.id,
+                    rating=None,
+                    rating_criterion=None,
+                    preferred_over=p.rejected_audio_id,
+                    tags=None,
+                    notes=p.notes,
+                    created_at=p.created_at,
+                )
+            )
+
+        # Add tags as a single feedback item if present
+        if sample_tags:
+            # Create a synthetic feedback item for tags (no id, use first tag's id or generate)
+            # For simplicity, we'll include tags in the sample metadata rather than as a feedback item
+            pass
 
         samples.append(
             SampleFeedbackGroup(
                 audio_id=audio_id,
                 label=SAMPLE_LABELS[idx] if idx < len(SAMPLE_LABELS) else str(idx + 1),
-                feedback=[
-                    SampleFeedbackItem(
-                        id=fb.id,
-                        rating=fb.rating,
-                        rating_criterion=fb.rating_criterion,
-                        preferred_over=fb.preferred_over,
-                        tags=fb.tags,
-                        notes=fb.notes,
-                        created_at=fb.created_at,
-                    )
-                    for fb in sample_feedback
-                ],
+                feedback=feedback_items,
                 average_rating=sample_avg,
-                feedback_count=len(sample_feedback),
+                feedback_count=len(feedback_items),
+                tags=sample_tags if sample_tags else None,
             )
         )
 
@@ -195,7 +271,7 @@ async def get_job_feedback(
         job_id=job.id,
         prompt_id=job.prompt_id,
         total_samples=len(audio_ids),
-        total_feedback=len(feedback_list),
+        total_feedback=total_feedback,
         average_rating=average_rating,
         samples=samples,
     )

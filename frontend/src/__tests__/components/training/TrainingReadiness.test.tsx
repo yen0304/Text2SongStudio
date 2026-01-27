@@ -1,14 +1,22 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TrainingReadiness } from '@/components/training/TrainingReadiness';
-import { FeedbackStats } from '@/lib/api';
+import { RatingStats } from '@/lib/api';
 
-const mockStats: FeedbackStats = {
-  total_feedback: 100,
+const mockStats: RatingStats = {
+  audio_id: null,
   total_ratings: 80,
-  total_preferences: 20,
+  average_rating: 3.6,
+  rating_by_criterion: {
+    overall: 3.6,
+    melody: 3.8,
+    rhythm: 3.5,
+    harmony: 3.6,
+    coherence: 3.7,
+    creativity: 3.9,
+    adherence: 3.4,
+  },
   rating_distribution: { 1: 5, 2: 10, 3: 20, 4: 25, 5: 20 },
-  high_rated_samples: 25,
 };
 
 describe('TrainingReadiness', () => {
@@ -32,8 +40,9 @@ describe('TrainingReadiness', () => {
         onCreateDataset={vi.fn()}
       />
     );
-
-    expect(screen.getByText('25 / 50')).toBeInTheDocument();
+    
+    // High rated = 25 + 20 = 45
+    expect(screen.getByText('45 / 50')).toBeInTheDocument();
   });
 
   it('shows how many more samples are needed when not ready', () => {
@@ -45,13 +54,16 @@ describe('TrainingReadiness', () => {
       />
     );
 
-    // 50 - 25 = 25 more needed
-    expect(screen.getByText('25')).toBeInTheDocument();
+    // 50 - 45 = 5 more needed
+    expect(screen.getByText('5')).toBeInTheDocument();
     expect(screen.getByText(/more high-rated samples/)).toBeInTheDocument();
   });
 
   it('shows ready state when enough samples collected', () => {
-    const readyStats = { ...mockStats, high_rated_samples: 60 };
+    const readyStats: RatingStats = { 
+      ...mockStats, 
+      rating_distribution: { 1: 5, 2: 10, 3: 20, 4: 30, 5: 35 }  // 30+35=65 high rated
+    };
 
     render(
       <TrainingReadiness
@@ -62,11 +74,14 @@ describe('TrainingReadiness', () => {
     );
 
     expect(screen.getByText('Ready to train!')).toBeInTheDocument();
-    expect(screen.getByText('60 / 50')).toBeInTheDocument();
+    expect(screen.getByText('65 / 50')).toBeInTheDocument();
   });
 
   it('shows checkmark when ready', () => {
-    const readyStats = { ...mockStats, high_rated_samples: 50 };
+    const readyStats: RatingStats = { 
+      ...mockStats, 
+      rating_distribution: { 1: 5, 2: 10, 3: 20, 4: 25, 5: 25 }  // 25+25=50 high rated
+    };
 
     render(
       <TrainingReadiness
@@ -80,7 +95,10 @@ describe('TrainingReadiness', () => {
   });
 
   it('shows Create Dataset button when ready', () => {
-    const readyStats = { ...mockStats, high_rated_samples: 50 };
+    const readyStats: RatingStats = { 
+      ...mockStats, 
+      rating_distribution: { 1: 5, 2: 10, 3: 20, 4: 25, 5: 25 }  // 50 high rated
+    };
 
     render(
       <TrainingReadiness
@@ -94,7 +112,10 @@ describe('TrainingReadiness', () => {
   });
 
   it('calls onCreateDataset when button is clicked', () => {
-    const readyStats = { ...mockStats, high_rated_samples: 50 };
+    const readyStats: RatingStats = { 
+      ...mockStats, 
+      rating_distribution: { 1: 5, 2: 10, 3: 20, 4: 25, 5: 25 }  // 50 high rated
+    };
     const onCreateDataset = vi.fn();
 
     render(
@@ -138,7 +159,10 @@ describe('TrainingReadiness', () => {
   });
 
   it('caps progress bar at 100%', () => {
-    const readyStats = { ...mockStats, high_rated_samples: 100 };
+    const readyStats: RatingStats = { 
+      ...mockStats, 
+      rating_distribution: { 1: 5, 2: 10, 3: 20, 4: 50, 5: 55 }  // 105 high rated
+    };
 
     const { container } = render(
       <TrainingReadiness

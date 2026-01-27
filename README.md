@@ -23,6 +23,7 @@ An open-source, human-in-the-loop text-to-music generation platform designed for
 - [Technology Stack](#technology-stack)
 - [Getting Started](#getting-started)
 - [Configuration](#configuration)
+- [API Reference](#api-reference)
 - [Development](#development)
 - [Testing](#testing)
 - [Deployment](#deployment)
@@ -99,6 +100,17 @@ flowchart LR
 | Backend | FastAPI (Python), PyTorch, torchaudio, librosa |
 | Model | Meta MusicGen, PEFT/LoRA |
 | Storage | PostgreSQL (metadata), S3-compatible object storage (audio) |
+
+## End-to-End Workflow
+
+1. Users submit a textual description of desired music (style, mood, structure, instrumentation)
+2. The system generates multiple candidate audio samples using a selected base model and optional LoRA adapters
+3. Users listen, compare, and evaluate generated outputs via structured feedback interfaces
+4. The system records (prompt, audio, score, preference, tags) tuples
+5. Feedback data is transformed into supervised or preference-ranking training datasets
+6. LoRA adapters are trained or updated using parameter-efficient fine-tuning
+7. Newly trained adapters are registered and can be immediately applied during inference
+8. The system continuously improves through repeated human-model interaction cycles
 
 ## Getting Started
 
@@ -211,6 +223,22 @@ text2SongStdio/
 │       └── supervised.py    # Supervised fine-tuning
 └── openspec/                # Project specifications and proposals
 ```
+
+## API Reference
+
+The backend exposes a RESTful API. Key endpoints include:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/prompts` | GET, POST | Manage generation prompts |
+| `/api/generation` | POST | Generate audio samples |
+| `/api/audio` | GET | Retrieve generated audio |
+| `/api/feedback` | POST | Submit human feedback |
+| `/api/datasets` | GET, POST | Manage training datasets |
+| `/api/adapters` | GET, POST | Manage LoRA adapters |
+| `/health` | GET | Health check |
+
+Full API documentation is available at `/docs` when the backend is running.
 
 ## Development
 
@@ -362,11 +390,71 @@ services:
 
 ## Contributing
 
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contributions are welcome. Please read the guidelines below before submitting pull requests.
+
+### How to Contribute
+
+1. **Fork** the repository
+2. **Clone** your fork locally
+3. **Create a branch** for your changes (`git checkout -b feature/your-feature`)
+4. **Make changes** and commit with clear messages
+5. **Push** to your fork (`git push origin feature/your-feature`)
+6. **Open a Pull Request** against the `main` branch
+
+### Pull Request Guidelines
+
+- Provide a clear description of the changes
+- Reference related issues (e.g., `Fixes #123`)
+- Ensure all tests pass
+- Update documentation if needed
+- Follow the code style guidelines
+- Keep PRs focused on a single concern
+
+### Pull Request Template
+
+When opening a PR, include:
+
+```markdown
+## Description
+Brief description of changes
+
+## Type of Change
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Breaking change
+- [ ] Documentation update
+
+## Related Issues
+Fixes #(issue number)
+
+## Checklist
+- [ ] Tests added/updated
+- [ ] Documentation updated
+- [ ] Code follows style guidelines
+- [ ] All tests pass
+```
+
+### Reporting Issues
+
+When reporting bugs, include:
+
+- Clear description of the issue
+- Steps to reproduce
+- Expected vs actual behavior
+- Environment details (OS, Python version, Node.js version)
+- Relevant logs or screenshots
+
+### Feature Requests
+
+For feature requests, please:
+
+- Check existing issues to avoid duplicates
+- Describe the use case and expected behavior
+- Explain why this feature would be useful
 
 ## Roadmap
 
-- [x] Real-time training log streaming (implemented via SSE)
+- [ ] WebSocket support for real-time generation progress
 - [ ] Batch generation and export
 - [ ] Audio editing and trimming
 - [ ] Prompt templates and presets

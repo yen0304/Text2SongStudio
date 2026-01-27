@@ -29,7 +29,6 @@ class Adapter(Base):
     updated_at = Column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True
     )
-    deleted_at = Column(DateTime, nullable=True, index=True)
 
     # Unique constraint on name + version
     __table_args__ = ({"sqlite_autoincrement": True},)

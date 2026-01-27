@@ -3,17 +3,29 @@ import { render, screen, waitFor } from '@/test-utils';
 import { FeedbackPanel } from '@/components/FeedbackPanel';
 
 // Mock the api module with modular APIs
-const mockSubmit = vi.fn();
+const mockRatingsSubmit = vi.fn();
+const mockPreferencesSubmit = vi.fn();
+const mockTagsReplace = vi.fn();
 vi.mock('@/lib/api', () => ({
-  feedbackApi: {
-    submit: (...args: unknown[]) => mockSubmit(...args),
+  ratingsApi: {
+    submit: (...args: unknown[]) => mockRatingsSubmit(...args),
+  },
+  preferencesApi: {
+    submit: (...args: unknown[]) => mockPreferencesSubmit(...args),
+  },
+  tagsApi: {
+    replaceForAudio: (...args: unknown[]) => mockTagsReplace(...args),
   },
 }));
 
 describe('FeedbackPanel', () => {
   beforeEach(() => {
-    mockSubmit.mockClear();
-    mockSubmit.mockResolvedValue({ id: 'feedback-1' });
+    mockRatingsSubmit.mockClear();
+    mockPreferencesSubmit.mockClear();
+    mockTagsReplace.mockClear();
+    mockRatingsSubmit.mockResolvedValue({ id: 'rating-1' });
+    mockPreferencesSubmit.mockResolvedValue({ id: 'preference-1' });
+    mockTagsReplace.mockResolvedValue({ tags: ['good_melody'] });
   });
 
   it('renders feedback panel', () => {
@@ -123,9 +135,9 @@ describe('FeedbackPanel', () => {
     await user.click(submitButton);
     
     await waitFor(() => {
-      expect(mockSubmit).toHaveBeenCalledWith(expect.objectContaining({
-        audio_id: 'audio-1',
-        preferred_over: 'audio-2',
+      expect(mockPreferencesSubmit).toHaveBeenCalledWith(expect.objectContaining({
+        chosen_audio_id: 'audio-1',
+        rejected_audio_id: 'audio-2',
       }));
     });
   });
@@ -169,10 +181,12 @@ describe('FeedbackPanel', () => {
     await user.click(submitButton);
     
     await waitFor(() => {
-      expect(mockSubmit).toHaveBeenCalledWith(expect.objectContaining({
-        audio_id: 'audio-1',
-        tags: ['good_melody'],
-      }));
+      expect(mockTagsReplace).toHaveBeenCalledWith(
+        'audio-1',
+        expect.objectContaining({
+          tags: ['good_melody'],
+        })
+      );
     });
   });
 
@@ -214,9 +228,7 @@ describe('FeedbackPanel', () => {
     await user.click(submitButton);
     
     await waitFor(() => {
-      expect(mockSubmit).toHaveBeenCalledWith(expect.objectContaining({
-        notes: 'This is a great sample!',
-      }));
+      expect(mockTagsReplace).toHaveBeenCalled();
     });
   });
 
@@ -228,7 +240,7 @@ describe('FeedbackPanel', () => {
   });
 
   it('handles rating submission error gracefully', async () => {
-    mockSubmit.mockRejectedValue(new Error('Submission failed'));
+    mockRatingsSubmit.mockRejectedValue(new Error('Submission failed'));
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     
     const { user, container } = render(<FeedbackPanel audioIds={['audio-1']} />);

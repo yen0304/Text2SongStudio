@@ -16,7 +16,37 @@
 - [x] 2.2 Implement POST /prompts endpoint with validation
 - [x] 2.3 Implement GET /prompts and GET /prompts/{id} endpoints
 - [x] 2.4 Build prompt editor component in frontend
-- [x] 2.5 Add structured attribute inputs (style, tempo, mood, instrumentation)
+- [x] 2.5 Add structured attribute inputs (style, tempo, mood, 
+95 x 16
+讓我先了解一下目前的音樂生成配置和設定：
+
+現在我了解了問題所在。讓我檢查一下有什麼更好的模型選項：
+
+讀取 spec.md，1 至 50 行
+
+根據我的分析，以下是提升音樂生成品質的幾個關鍵方向：
+
+🎵 提升音樂品質的方法
+1. 升級到更大的模型 ⭐ 最有效
+你目前使用的是 facebook/musicgen-small，這是最小的版本。MusicGen 有三個版本：
+
+模型	參數量	品質
+musicgen-small	300M	較差
+musicgen-medium	1.5B	中等
+musicgen-large	3.3B	最佳
+修改方式：在 .env 檔案中或 config.py 更改：
+
+2. 調整生成參數
+在生成時可以調整這些參數來改善品質：
+
+參數	目前值	建議值	說明
+temperature	1.0	0.7-0.9	降低可讓輸出更穩定
+top_k	250	150-200	減少隨機性
+top_p	0.0	0.9	啟用 nucleus sampling
+3. 使用更好的 Prompt 描述
+撰寫更詳細的音樂描述，例如：
+
+instrumentation)
 - [x] 2.6 Implement prompt validation (length limits, attribute schema)
 - [x] 2.7 Add prompt history/listing UI
 
