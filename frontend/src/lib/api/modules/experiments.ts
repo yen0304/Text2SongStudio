@@ -89,6 +89,22 @@ export const experimentsApi = {
     }),
 
   /**
+   * Delete a run from an experiment
+   * Only runs in terminal states (failed, completed, cancelled) can be deleted
+   */
+  deleteRun: (experimentId: string, runId: string) =>
+    fetchApi<void>(`/experiments/${experimentId}/runs/${runId}`, { method: 'DELETE' }),
+
+  /**
+   * Delete multiple runs at once
+   * Only runs in terminal states (failed, completed, cancelled) can be deleted
+   */
+  deleteRunsBatch: (experimentId: string, runIds: string[]) =>
+    fetchApi<{ deleted: number }>(`/experiments/${experimentId}/runs?${runIds.map(id => `run_ids=${id}`).join('&')}`, { 
+      method: 'DELETE',
+    }),
+
+  /**
    * Get experiment metrics summary
    */
   getMetrics: (experimentId: string) =>

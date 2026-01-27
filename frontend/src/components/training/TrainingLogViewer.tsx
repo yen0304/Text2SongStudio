@@ -27,6 +27,8 @@ export function TrainingLogViewer({
   const [isConnected, setIsConnected] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasLogs, setHasLogs] = useState(false);
 
   // Decode base64 to Uint8Array
   const decodeBase64 = useCallback((base64: string): Uint8Array => {
@@ -92,21 +94,41 @@ export function TrainingLogViewer({
     terminal.loadAddon(fitAddon);
 
     terminal.open(terminalRef.current);
-    fitAddon.fit();
+    
+    // Delay fit to ensure container has proper dimensions
+    requestAnimationFrame(() => {
+      try {
+        fitAddon.fit();
+      } catch {
+        // Container may not be ready yet
+      }
+    });
 
     terminalInstance.current = terminal;
     fitAddonRef.current = fitAddon;
 
     // Handle resize
     const handleResize = () => {
-      fitAddon.fit();
+      if (fitAddonRef.current && terminalInstance.current) {
+        try {
+          fitAddonRef.current.fit();
+        } catch {
+          // Terminal may be disposed
+        }
+      }
     };
 
     window.addEventListener('resize', handleResize);
 
     // Use ResizeObserver for container resize
     const resizeObserver = new ResizeObserver(() => {
-      fitAddon.fit();
+      if (fitAddonRef.current && terminalInstance.current) {
+        try {
+          fitAddonRef.current.fit();
+        } catch {
+          // Terminal may be disposed
+        }
+      }
     });
     resizeObserver.observe(terminalRef.current);
 
@@ -123,14 +145,20 @@ export function TrainingLogViewer({
   useEffect(() => {
     if (!terminalInstance.current) return;
 
+    // Clear terminal when runId changes
+    terminalInstance.current.clear();
+    setHasLogs(false);
+    setIsLoading(true);
+    setError(null);
+
     const loadHistory = async () => {
       try {
-        setError(null);
         const response = await logsApi.getLogs(runId);
 
-        if (response.data) {
+        if (response.data && response.data.length > 0) {
           const bytes = decodeBase64(response.data);
           writeToTerminal(bytes);
+          setHasLogs(true);
         }
 
         // If live, connect to SSE stream
@@ -140,6 +168,8 @@ export function TrainingLogViewer({
       } catch (err) {
         console.error('[TrainingLogViewer] Failed to load history:', err);
         setError('Failed to load log history');
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -156,6 +186,7 @@ export function TrainingLogViewer({
         if (parsed?.type === 'log') {
           const bytes = decodeBase64(parsed.data.chunk);
           writeToTerminal(bytes);
+          setHasLogs(true);
         }
       });
 
@@ -258,11 +289,31 @@ export function TrainingLogViewer({
       </div>
 
       {/* Terminal */}
-      <div
-        ref={terminalRef}
-        style={{ height }}
-        className="bg-[#1a1b26]"
-      />
+      <div className="relative">
+        <div
+          ref={terminalRef}
+          style={{ height }}
+          className="bg-[#1a1b26]"
+        />
+        {/* Loading overlay */}
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#1a1b26]/80">
+            <div className="flex items-center gap-2 text-zinc-400">
+              <div className="w-4 h-4 border-2 border-zinc-500 border-t-zinc-300 rounded-full animate-spin" />
+              <span className="text-sm">Loading logs...</span>
+            </div>
+          </div>
+        )}
+        {/* Waiting for logs message */}
+        {!isLoading && !hasLogs && isLive && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#1a1b26]">
+            <div className="flex flex-col items-center gap-2 text-zinc-400">
+              <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
+              <span className="text-sm">Waiting for logs...</span>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Error message */}
       {error && (
