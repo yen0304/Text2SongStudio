@@ -203,7 +203,7 @@ describe('TrainingDashboard', () => {
     const progressTab = screen.getByRole('button', { name: 'Progress' });
     await user.click(progressTab);
     
-    expect(screen.getByText('100')).toBeInTheDocument();
-    expect(screen.getByText('Total Feedback')).toBeInTheDocument();
+    expect(screen.getByText('80')).toBeInTheDocument();
+    expect(screen.getByText('Total Ratings')).toBeInTheDocument();
   });
 });

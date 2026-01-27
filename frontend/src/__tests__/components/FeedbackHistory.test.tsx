@@ -42,7 +42,7 @@ describe('FeedbackHistory', () => {
     render(<FeedbackHistory />);
     
     await waitFor(() => {
-      expect(screen.getByText('Feedback History')).toBeInTheDocument();
+      expect(screen.getByText('Rating History')).toBeInTheDocument();
     });
   });
 
@@ -54,11 +54,11 @@ describe('FeedbackHistory', () => {
     });
   });
 
-  it('displays job ID filter input', async () => {
+  it('displays audio ID filter input', async () => {
     render(<FeedbackHistory />);
     
     await waitFor(() => {
-      expect(screen.getByPlaceholderText(/job id/i)).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/audio id/i)).toBeInTheDocument();
     });
   });
 
@@ -76,8 +76,8 @@ describe('FeedbackHistory', () => {
     mockList.mockReturnValue(new Promise(() => {})); // Never resolves
     render(<FeedbackHistory />);
     
-    // Should show loading indicator
-    expect(screen.getByText('Feedback History')).toBeInTheDocument();
+    // Should show rating history title
+    expect(screen.getByText('Rating History')).toBeInTheDocument();
   });
 
   it('handles error state', async () => {
@@ -120,8 +120,8 @@ describe('FeedbackHistory', () => {
       expect(mockList).toHaveBeenCalledTimes(1);
     });
 
-    const searchInput = screen.getByPlaceholderText(/job id/i);
-    await user.type(searchInput, 'job-456');
+    const searchInput = screen.getByPlaceholderText(/audio id/i);
+    await user.type(searchInput, 'audio-456');
 
     const searchButton = screen.getByRole('button', { name: /search/i });
     await user.click(searchButton);
@@ -129,7 +129,7 @@ describe('FeedbackHistory', () => {
     await waitFor(() => {
       expect(mockList).toHaveBeenCalledWith(
         expect.objectContaining({
-          job_id: 'job-456',
+          audio_id: 'audio-456',
         })
       );
     });

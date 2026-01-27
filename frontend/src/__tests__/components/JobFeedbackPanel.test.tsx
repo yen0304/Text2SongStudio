@@ -34,13 +34,14 @@ const mockJobFeedbackData = {
           rating: 4,
           rating_criterion: 'overall',
           preferred_over: null,
-          tags: ['good_melody'],
+          tags: null,
           notes: 'Nice tune',
           created_at: '2024-01-01T00:00:00Z',
         },
       ],
       average_rating: 4,
       feedback_count: 1,
+      tags: ['good_melody'],  // Tags at sample level from AudioTag table
     },
     {
       audio_id: 'audio-2',
@@ -58,6 +59,7 @@ const mockJobFeedbackData = {
       ],
       average_rating: 3,
       feedback_count: 1,
+      tags: null,
     },
     {
       audio_id: 'audio-3',
@@ -65,6 +67,7 @@ const mockJobFeedbackData = {
       feedback: [],
       average_rating: null,
       feedback_count: 0,
+      tags: null,
     },
   ],
 };

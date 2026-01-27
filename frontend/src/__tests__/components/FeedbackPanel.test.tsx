@@ -46,7 +46,7 @@ describe('FeedbackPanel', () => {
   });
 
   it('renders preference section for multiple samples', () => {
-    render(<FeedbackPanel audioIds={['audio-1', 'audio-2']} />);
+    render(<FeedbackPanel audioIds={['audio-1', 'audio-2']} promptId="prompt-1" />);
     expect(screen.getByText('Preference')).toBeInTheDocument();
   });
 
@@ -108,7 +108,7 @@ describe('FeedbackPanel', () => {
   });
 
   it('allows selecting preferred sample', async () => {
-    const { user } = render(<FeedbackPanel audioIds={['audio-1', 'audio-2']} />);
+    const { user } = render(<FeedbackPanel audioIds={['audio-1', 'audio-2']} promptId="prompt-1" />);
     
     // Find preference buttons (A and B)
     const preferenceButtons = screen.getAllByText(/Click to select/);
@@ -123,7 +123,7 @@ describe('FeedbackPanel', () => {
   it('submits preference feedback', async () => {
     const onFeedbackSubmitted = vi.fn();
     const { user } = render(
-      <FeedbackPanel audioIds={['audio-1', 'audio-2']} onFeedbackSubmitted={onFeedbackSubmitted} />
+      <FeedbackPanel audioIds={['audio-1', 'audio-2']} promptId="prompt-1" onFeedbackSubmitted={onFeedbackSubmitted} />
     );
     
     // Select sample A
@@ -184,7 +184,7 @@ describe('FeedbackPanel', () => {
       expect(mockTagsReplace).toHaveBeenCalledWith(
         'audio-1',
         expect.objectContaining({
-          tags: ['good_melody'],
+          positive_tags: ['good_melody'],
         })
       );
     });
