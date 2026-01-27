@@ -7,7 +7,6 @@ import type {
   Dataset,
   DatasetExport,
   DatasetStats,
-  JobFeedbackResponse,
   QualityRating,
   PreferencePair,
   AudioTag,
@@ -15,6 +14,7 @@ import type {
   PreferenceStats,
   TagStats,
 } from '@/lib/api';
+import type { JobFeedbackResponse } from '@/lib/api/types/generation';
 
 // Mock data factories
 export const createMockAdapter = (overrides?: Partial<Adapter>): Adapter => ({

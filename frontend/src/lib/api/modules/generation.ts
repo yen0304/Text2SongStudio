@@ -9,9 +9,9 @@ import type {
   GenerationJob, 
   JobDetail, 
   JobStats, 
-  SubmitGenerationRequest 
+  SubmitGenerationRequest,
+  JobFeedbackResponse
 } from '../types/generation';
-import type { JobFeedbackResponse } from '../types/feedback';
 import type { PaginatedResponse } from '../types/common';
 
 export interface ListJobsParams {

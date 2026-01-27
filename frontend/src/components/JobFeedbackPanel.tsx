@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { generationApi, ratingsApi, preferencesApi, type JobFeedbackResponse, type SampleFeedbackGroup } from '@/lib/api';
+import { generationApi, ratingsApi, preferencesApi } from '@/lib/api';
+import type { JobFeedbackResponse, SampleFeedbackGroup } from '@/lib/api/types/generation';
 import { Star, ThumbsUp, MessageSquare, Loader2, RefreshCw, Trash2, Tag } from 'lucide-react';
 
 interface JobFeedbackPanelProps {

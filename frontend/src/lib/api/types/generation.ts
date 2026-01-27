@@ -39,3 +39,32 @@ export interface SubmitGenerationRequest {
   num_samples?: number;
   adapter_id?: string;
 }
+
+// Job Feedback Types
+export interface SampleFeedbackItem {
+  id: string;
+  rating: number | null;
+  rating_criterion: string | null;
+  preferred_over: string | null;
+  tags: string[] | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface SampleFeedbackGroup {
+  audio_id: string;
+  label: string;
+  feedback: SampleFeedbackItem[];
+  average_rating: number | null;
+  feedback_count: number;
+  tags: string[] | null;
+}
+
+export interface JobFeedbackResponse {
+  job_id: string;
+  prompt_id: string;
+  total_samples: number;
+  total_feedback: number;
+  average_rating: number | null;
+  samples: SampleFeedbackGroup[];
+}
