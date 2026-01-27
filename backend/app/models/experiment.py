@@ -76,3 +76,6 @@ class ExperimentRun(Base):
     # Relationships
     experiment = relationship("Experiment", back_populates="runs")
     adapter = relationship("Adapter", back_populates="training_runs")
+    logs = relationship(
+        "TrainingLog", back_populates="run", cascade="all, delete-orphan", uselist=False
+    )

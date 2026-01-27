@@ -1,5 +1,7 @@
 import asyncio
+import shutil
 from datetime import datetime
+from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -18,6 +20,9 @@ from app.schemas import (
     ExperimentUpdate,
 )
 from app.services.training import TrainingService
+
+# Backend root directory for adapter storage
+BACKEND_ROOT = Path(__file__).parents[2]
 
 router = APIRouter(prefix="/experiments", tags=["experiments"])
 
@@ -440,3 +445,160 @@ async def get_experiment_metrics(
         "best_loss": experiment.best_loss,
         "best_run_id": experiment.best_run_id,
     }
+
+
+@router.delete("/{experiment_id}/runs/{run_id}", status_code=204)
+async def delete_run(
+    experiment_id: UUID,
+    run_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a specific run from an experiment.
+
+    Only runs in terminal states (FAILED, COMPLETED, CANCELLED) can be deleted.
+    Running or pending runs must be stopped first.
+    """
+    # Verify experiment exists
+    result = await db.execute(select(Experiment).where(Experiment.id == experiment_id))
+    experiment = result.scalar_one_or_none()
+
+    if not experiment:
+        raise HTTPException(status_code=404, detail="Experiment not found")
+
+    # Get the run
+    result = await db.execute(
+        select(ExperimentRun).where(
+            ExperimentRun.id == run_id,
+            ExperimentRun.experiment_id == experiment_id,
+        )
+    )
+    run = result.scalar_one_or_none()
+
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    # Check if run can be deleted (must be in terminal state)
+    terminal_states = {RunStatus.FAILED, RunStatus.COMPLETED, RunStatus.CANCELLED}
+    if run.status not in terminal_states:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete run in '{run.status.value}' state. Only failed, completed, or cancelled runs can be deleted.",
+        )
+
+    # Delete adapter directory if exists
+    adapter_dir = BACKEND_ROOT / "adapters" / str(experiment_id) / str(run_id)
+    if adapter_dir.exists():
+        shutil.rmtree(adapter_dir)
+
+    # Check if this was the best run
+    was_best_run = experiment.best_run_id == run_id
+
+    # Delete the run (training_logs will cascade)
+    await db.delete(run)
+
+    # Recalculate best run if needed
+    if was_best_run:
+        # Find the new best run among remaining completed runs
+        best_result = await db.execute(
+            select(ExperimentRun)
+            .where(
+                ExperimentRun.experiment_id == experiment_id,
+                ExperimentRun.status == RunStatus.COMPLETED,
+                ExperimentRun.final_loss.isnot(None),
+            )
+            .order_by(ExperimentRun.final_loss.asc())
+            .limit(1)
+        )
+        new_best_run = best_result.scalar_one_or_none()
+
+        if new_best_run:
+            experiment.best_run_id = new_best_run.id
+            experiment.best_loss = new_best_run.final_loss
+        else:
+            experiment.best_run_id = None
+            experiment.best_loss = None
+
+        experiment.updated_at = datetime.utcnow()
+
+    await db.commit()
+
+
+@router.delete("/{experiment_id}/runs")
+async def delete_runs_batch(
+    experiment_id: UUID,
+    run_ids: list[UUID] = Query(..., description="List of run IDs to delete"),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Delete multiple runs at once.
+    Only runs in terminal states (failed, completed, cancelled) can be deleted.
+    """
+    # Verify experiment exists
+    result = await db.execute(select(Experiment).where(Experiment.id == experiment_id))
+    experiment = result.scalar_one_or_none()
+
+    if not experiment:
+        raise HTTPException(status_code=404, detail="Experiment not found")
+
+    # Get all runs
+    result = await db.execute(
+        select(ExperimentRun).where(
+            ExperimentRun.id.in_(run_ids),
+            ExperimentRun.experiment_id == experiment_id,
+        )
+    )
+    runs = result.scalars().all()
+
+    if not runs:
+        raise HTTPException(status_code=404, detail="No runs found")
+
+    # Check all runs are in terminal state
+    terminal_states = {RunStatus.FAILED, RunStatus.COMPLETED, RunStatus.CANCELLED}
+    non_terminal = [r for r in runs if r.status not in terminal_states]
+    if non_terminal:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete {len(non_terminal)} run(s) that are not in terminal state",
+        )
+
+    deleted_count = 0
+    was_best_deleted = False
+
+    for run in runs:
+        # Delete adapter directory if exists
+        adapter_dir = BACKEND_ROOT / "adapters" / str(experiment_id) / str(run.id)
+        if adapter_dir.exists():
+            shutil.rmtree(adapter_dir)
+
+        if experiment.best_run_id == run.id:
+            was_best_deleted = True
+
+        await db.delete(run)
+        deleted_count += 1
+
+    # Recalculate best run if needed
+    if was_best_deleted:
+        best_result = await db.execute(
+            select(ExperimentRun)
+            .where(
+                ExperimentRun.experiment_id == experiment_id,
+                ExperimentRun.status == RunStatus.COMPLETED,
+                ExperimentRun.final_loss.isnot(None),
+            )
+            .order_by(ExperimentRun.final_loss.asc())
+            .limit(1)
+        )
+        new_best_run = best_result.scalar_one_or_none()
+
+        if new_best_run:
+            experiment.best_run_id = new_best_run.id
+            experiment.best_loss = new_best_run.final_loss
+        else:
+            experiment.best_run_id = None
+            experiment.best_loss = None
+
+        experiment.updated_at = datetime.utcnow()
+
+    await db.commit()
+
+    return {"deleted": deleted_count}

@@ -23,4 +23,4 @@ class TrainingLog(Base):
     )
 
     # Relationships
-    run = relationship("ExperimentRun", backref="training_log", uselist=False)
+    run = relationship("ExperimentRun", back_populates="logs")
