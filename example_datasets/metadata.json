@@ -1,0 +1,40 @@
+{
+  "name": "Text2SongStudio Example Dataset",
+  "version": "1.0.0",
+  "description": "Example dataset demonstrating the required format for fine-tuning MusicGen models",
+  "license": "MIT",
+  "created_at": "2026-01-27",
+  "author": "Text2SongStudio Team",
+  "datasets": {
+    "supervised": {
+      "file": "supervised_dataset.jsonl",
+      "sample_count": 20,
+      "format": "jsonl",
+      "description": "Supervised fine-tuning dataset with rated audio samples"
+    },
+    "preference": {
+      "file": "preference_dataset.jsonl",
+      "sample_count": 20,
+      "format": "jsonl",
+      "description": "Preference learning (DPO) dataset with chosen/rejected pairs"
+    }
+  },
+  "audio_requirements": {
+    "sample_rate": 32000,
+    "max_duration_seconds": 10.0,
+    "channels": "mono (stereo will be converted)",
+    "formats": ["wav", "mp3", "flac"]
+  },
+  "model_compatibility": [
+    "facebook/musicgen-small",
+    "facebook/musicgen-medium",
+    "facebook/musicgen-large"
+  ],
+  "tags_vocabulary": [
+    "pop", "rock", "jazz", "classical", "electronic", "edm", "ambient",
+    "hip-hop", "lo-fi", "orchestral", "cinematic", "acoustic", "metal",
+    "folk", "country", "reggae", "disco", "funk", "blues", "k-pop",
+    "cheerful", "melancholic", "energetic", "relaxing", "dramatic", "peaceful",
+    "epic", "dark", "bright", "smooth", "heavy", "gentle", "tense"
+  ]
+}

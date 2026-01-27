@@ -1,0 +1,20 @@
+{"prompt": "A cheerful pop song with bright piano melody and uplifting rhythm", "audio_path": "./audio/pop_cheerful_001.wav", "rating": 5.0, "tags": ["pop", "piano", "cheerful", "uplifting"]}
+{"prompt": "Cinematic orchestral piece with dramatic strings and powerful brass", "audio_path": "./audio/orchestral_dramatic_001.wav", "rating": 4.8, "tags": ["orchestral", "cinematic", "dramatic", "epic"]}
+{"prompt": "Relaxing lo-fi hip hop beat with warm vinyl crackles", "audio_path": "./audio/lofi_chill_001.wav", "rating": 4.5, "tags": ["lo-fi", "hip-hop", "chill", "relaxing"]}
+{"prompt": "Energetic electronic dance music with heavy bass drops", "audio_path": "./audio/edm_energetic_001.wav", "rating": 5.0, "tags": ["edm", "electronic", "dance", "bass"]}
+{"prompt": "Soft acoustic guitar ballad with gentle vocals", "audio_path": "./audio/acoustic_ballad_001.wav", "rating": 4.7, "tags": ["acoustic", "guitar", "ballad", "gentle"]}
+{"prompt": "Dark ambient soundscape with eerie synthesizers", "audio_path": "./audio/ambient_dark_001.wav", "rating": 4.3, "tags": ["ambient", "dark", "synthesizer", "atmospheric"]}
+{"prompt": "Funky disco groove with slap bass and brass section", "audio_path": "./audio/disco_funky_001.wav", "rating": 4.6, "tags": ["disco", "funk", "bass", "brass"]}
+{"prompt": "Traditional Japanese koto music with peaceful atmosphere", "audio_path": "./audio/japanese_koto_001.wav", "rating": 4.9, "tags": ["japanese", "koto", "traditional", "peaceful"]}
+{"prompt": "Heavy metal riff with distorted guitars and double bass drums", "audio_path": "./audio/metal_heavy_001.wav", "rating": 4.4, "tags": ["metal", "heavy", "guitar", "drums"]}
+{"prompt": "Smooth jazz saxophone solo over walking bass", "audio_path": "./audio/jazz_smooth_001.wav", "rating": 4.8, "tags": ["jazz", "saxophone", "smooth", "bass"]}
+{"prompt": "8-bit chiptune game music with catchy melody", "audio_path": "./audio/chiptune_game_001.wav", "rating": 4.5, "tags": ["chiptune", "8-bit", "game", "retro"]}
+{"prompt": "Epic trailer music with building tension and heroic climax", "audio_path": "./audio/trailer_epic_001.wav", "rating": 5.0, "tags": ["trailer", "epic", "cinematic", "heroic"]}
+{"prompt": "Reggae rhythm with laid-back guitar skank and dub bass", "audio_path": "./audio/reggae_chill_001.wav", "rating": 4.2, "tags": ["reggae", "dub", "chill", "bass"]}
+{"prompt": "Classical piano sonata in the style of Chopin", "audio_path": "./audio/classical_piano_001.wav", "rating": 4.7, "tags": ["classical", "piano", "romantic", "chopin"]}
+{"prompt": "Upbeat country song with banjo and fiddle", "audio_path": "./audio/country_upbeat_001.wav", "rating": 4.4, "tags": ["country", "banjo", "fiddle", "upbeat"]}
+{"prompt": "Tropical house with steel drums and summer vibes", "audio_path": "./audio/tropical_house_001.wav", "rating": 4.6, "tags": ["tropical", "house", "summer", "steel-drums"]}
+{"prompt": "Melancholic indie folk with fingerpicking guitar", "audio_path": "./audio/indie_folk_001.wav", "rating": 4.5, "tags": ["indie", "folk", "melancholic", "acoustic"]}
+{"prompt": "Tense horror movie score with dissonant strings", "audio_path": "./audio/horror_tense_001.wav", "rating": 4.3, "tags": ["horror", "tense", "strings", "dissonant"]}
+{"prompt": "Bright K-pop style beat with catchy synth hooks", "audio_path": "./audio/kpop_bright_001.wav", "rating": 4.8, "tags": ["k-pop", "synth", "catchy", "bright"]}
+{"prompt": "Meditative tibetan singing bowls with gentle drone", "audio_path": "./audio/meditation_bowls_001.wav", "rating": 4.9, "tags": ["meditation", "tibetan", "singing-bowls", "peaceful"]}
