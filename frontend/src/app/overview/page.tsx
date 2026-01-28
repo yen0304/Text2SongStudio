@@ -33,9 +33,17 @@ interface PipelineStageProps {
   icon: React.ReactNode;
   href: string;
   isActive?: boolean;
+  color?: 'blue' | 'purple' | 'orange' | 'green';
 }
 
-function PipelineStage({ title, count, subtitle, icon, href, isActive }: PipelineStageProps) {
+function PipelineStage({ title, count, subtitle, icon, href, isActive, color = 'blue' }: PipelineStageProps) {
+  const colorClasses = {
+    blue: 'text-blue-600 bg-blue-500/10 border-blue-500/30 hover:border-blue-500/50',
+    purple: 'text-purple-600 bg-purple-500/10 border-purple-500/30 hover:border-purple-500/50',
+    orange: 'text-orange-600 bg-orange-500/10 border-orange-500/30 hover:border-orange-500/50',
+    green: 'text-green-600 bg-green-500/10 border-green-500/30 hover:border-green-500/50',
+  };
+
   return (
     <Link
       href={href}
@@ -44,14 +52,14 @@ function PipelineStage({ title, count, subtitle, icon, href, isActive }: Pipelin
       <div className={`
         relative p-4 rounded-lg border-2 transition-all
         ${isActive
-          ? 'border-primary bg-primary/5'
-          : 'border-border hover:border-primary/50 hover:bg-muted/50'
+          ? `${colorClasses[color]} border-opacity-100`
+          : `border-border hover:${colorClasses[color]}`
         }
       `}>
         {isActive && (
           <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse" />
         )}
-        <div className="flex items-center gap-2 mb-2 text-muted-foreground group-hover:text-foreground">
+        <div className={`flex items-center gap-2 mb-2 ${isActive ? colorClasses[color].split(' ')[0] : 'text-muted-foreground'} group-hover:${colorClasses[color].split(' ')[0]}`}>
           {icon}
           <span className="text-sm font-medium">{title}</span>
         </div>
@@ -142,6 +150,7 @@ export default function OverviewPage() {
               icon={<Play size={16} />}
               href="/jobs"
               isActive={data.pipeline.generation.active > 0}
+              color="blue"
             />
             <PipelineArrow />
             <PipelineStage
@@ -151,6 +160,7 @@ export default function OverviewPage() {
               icon={<MessageSquare size={16} />}
               href="/jobs"
               isActive={data.pipeline.feedback.pending > 0}
+              color="purple"
             />
             <PipelineArrow />
             <PipelineStage
@@ -159,6 +169,7 @@ export default function OverviewPage() {
               subtitle={`${data.pipeline.dataset.exported} exported`}
               icon={<Database size={16} />}
               href="/datasets"
+              color="orange"
             />
             <PipelineArrow />
             <PipelineStage
@@ -168,6 +179,7 @@ export default function OverviewPage() {
               icon={<FlaskConical size={16} />}
               href="/experiments"
               isActive={data.pipeline.training.running > 0}
+              color="green"
             />
           </div>
         </CardContent>
