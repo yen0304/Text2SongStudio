@@ -48,6 +48,8 @@ from app.schemas.experiment import (
     ExperimentRunCreate,
     ExperimentRunResponse,
     ExperimentUpdate,
+    MetricDataPoint,
+    RunMetricsResponse,
 )
 from app.schemas.generation import (
     GenerationJobResponse,
@@ -145,4 +147,6 @@ __all__ = [
     "TrainingLogResponse",
     "TrainingLogChunk",
     "TrainingLogDone",
+    "MetricDataPoint",
+    "RunMetricsResponse",
 ]

@@ -5,6 +5,23 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 
+# Metric data point for time-series metrics
+class MetricDataPoint(BaseModel):
+    step: int
+    value: float
+    timestamp: str
+
+
+# Run metrics response
+class RunMetricsResponse(BaseModel):
+    run_id: UUID
+    metrics: dict[str, list[MetricDataPoint]]
+    metadata: dict[str, Any]
+
+    class Config:
+        from_attributes = True
+
+
 # Experiment Schemas
 class ExperimentCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)

@@ -447,6 +447,74 @@ async def get_experiment_metrics(
     }
 
 
+@router.get("/{experiment_id}/runs/{run_id}/metrics")
+async def get_run_metrics(
+    experiment_id: UUID,
+    run_id: UUID,
+    metric_type: str | None = Query(None, description="Filter to specific metric type"),
+    min_step: int | None = Query(None, description="Minimum step (inclusive)"),
+    max_step: int | None = Query(None, description="Maximum step (inclusive)"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get time-series metrics for a specific run.
+
+    Returns metrics from the ExperimentRun.metrics JSON field for visualization.
+    Supports filtering by metric type and step range.
+    """
+    # Verify experiment exists
+    result = await db.execute(select(Experiment).where(Experiment.id == experiment_id))
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Experiment not found")
+
+    # Get run
+    result = await db.execute(
+        select(ExperimentRun).where(
+            ExperimentRun.id == run_id,
+            ExperimentRun.experiment_id == experiment_id,
+        )
+    )
+    run = result.scalar_one_or_none()
+
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+
+    # Get metrics
+    metrics = run.metrics or {}
+
+    # Filter by metric type if specified
+    if metric_type:
+        metrics = {metric_type: metrics.get(metric_type, [])}
+
+    # Filter by step range if specified
+    if min_step is not None or max_step is not None:
+        filtered_metrics = {}
+        for key, data_points in metrics.items():
+            if not isinstance(data_points, list):
+                filtered_metrics[key] = data_points
+                continue
+            filtered = []
+            for point in data_points:
+                step = point.get("step", 0)
+                if min_step is not None and step < min_step:
+                    continue
+                if max_step is not None and step > max_step:
+                    continue
+                filtered.append(point)
+            filtered_metrics[key] = filtered
+        metrics = filtered_metrics
+
+    return {
+        "run_id": str(run.id),
+        "metrics": metrics,
+        "metadata": {
+            "last_updated": run.completed_at or run.started_at,
+            "is_complete": run.status
+            in [RunStatus.COMPLETED, RunStatus.FAILED, RunStatus.CANCELLED],
+            "status": run.status.value,
+        },
+    }
+
+
 @router.delete("/{experiment_id}/runs/{run_id}", status_code=204)
 async def delete_run(
     experiment_id: UUID,
