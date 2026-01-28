@@ -39,9 +39,9 @@ The system SHALL display training configuration for adapters in an organized, in
 
 ## MODIFIED Requirements
 
-### Requirement: Adapter Detail View
+### Requirement: Adapter Listing and Discovery
 
-The system SHALL provide a tabbed interface for viewing adapter details and configuration.
+The system SHALL allow users to discover and browse available adapters, with tabs for different views.
 
 #### Scenario: Navigate adapter detail tabs
 

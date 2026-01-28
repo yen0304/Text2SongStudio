@@ -1,5 +1,13 @@
 # Add Adapter Training Configuration View
 
+## Why
+ML engineers need to review and understand training hyperparameters used for each adapter. The current raw JSON display is hard to read and lacks explanations for what each parameter does.
+
+## What Changes
+- Backend returns `training_config` in adapter detail API
+- Frontend adds tabbed interface (Overview/Configuration) to adapter detail page
+- New configuration tab displays hyperparameters grouped by category with tooltips
+
 ## Summary
 Add a dedicated training configuration view for adapters, displaying hyperparameters with explanatory tooltips in a professional workstation-style UI similar to AWS/GitLab pipelines.
 

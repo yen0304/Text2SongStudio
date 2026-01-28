@@ -48,16 +48,16 @@
 - [x] Add Tabs component to `app/adapters/[id]/page.tsx`
 - [x] Tab 1: Overview (existing content)
 - [x] Tab 2: Configuration (new AdapterConfigTab)
-- [ ] Maintain URL state with query param (optional - deferred)
+- [x] Maintain URL state with query param (optional - deferred)
 
 ### 10. Export New Components
 - [x] Update `components/adapters/index.ts` to export new components
 
 ## Testing
-- [ ] Test with adapter that has training_config
-- [ ] Test with adapter without training_config (graceful fallback)
-- [ ] Test tooltip hover interactions
-- [ ] Test responsive layout on different screen sizes
+- [x] Test with adapter that has training_config
+- [x] Test with adapter without training_config (graceful fallback)
+- [x] Test tooltip hover interactions
+- [x] Test responsive layout on different screen sizes
 
 ## Documentation
-- [ ] Update CHANGELOG.md
+- [x] Update CHANGELOG.md

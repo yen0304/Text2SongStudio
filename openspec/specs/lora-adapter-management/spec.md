@@ -28,19 +28,15 @@ The system SHALL maintain a registry of LoRA adapters as versioned artifacts.
 
 ### Requirement: Adapter Listing and Discovery
 
-The system SHALL allow users to discover and browse available adapters.
+The system SHALL allow users to discover and browse available adapters, with tabs for different views.
 
-#### Scenario: List adapters with activation status
+#### Scenario: Navigate adapter detail tabs
 
-- **WHEN** a user requests a list of adapters via UI
-- **THEN** the system clearly indicates which adapters are currently active
-- **AND** excludes soft-deleted adapters (where `deleted_at` is not NULL)
-- **AND** provides toggle controls for activation status
-
-#### Scenario: Get adapter details for deleted adapter
-
-- **WHEN** a user requests details of a soft-deleted adapter
-- **THEN** the system returns a 404 not-found error
+- **GIVEN** a user is viewing an adapter's detail page
+- **WHEN** the page loads
+- **THEN** the system displays tabs for "Overview" and "Configuration"
+- **AND** the Overview tab is selected by default
+- **AND** tab content switches without full page reload
 
 ### Requirement: Adapter Lifecycle Management
 
@@ -236,4 +232,39 @@ The system SHALL allow users to rename adapters for better identification.
 - **THEN** the system updates the adapter name in the database
 - **AND** the new name is immediately reflected in all UI views
 - **AND** the adapter's `updated_at` timestamp is updated
+
+### Requirement: Training Configuration Display
+
+The system SHALL display training configuration for adapters in an organized, informative format.
+
+#### Scenario: View training configuration tab
+
+- **GIVEN** a user is viewing an adapter's detail page
+- **WHEN** the user clicks the "Configuration" tab
+- **THEN** the system displays the training configuration grouped by category
+- **AND** categories include: Model, LoRA, Training, Hardware, Checkpointing
+- **AND** DPO category appears only for preference-trained adapters
+
+#### Scenario: View hyperparameter with tooltip
+
+- **GIVEN** a user is viewing the configuration tab
+- **WHEN** the user hovers over a parameter's info icon
+- **THEN** a tooltip appears explaining the parameter's purpose
+- **AND** the tooltip describes typical values or ranges
+- **AND** the tooltip disappears when the user moves away
+
+#### Scenario: Display missing configuration gracefully
+
+- **GIVEN** an adapter was not trained within the system (no training_config)
+- **WHEN** a user views the configuration tab
+- **THEN** the system displays a message indicating no training configuration is available
+- **AND** does not show empty or broken UI elements
+
+#### Scenario: Format configuration values appropriately
+
+- **WHEN** the system displays training configuration values
+- **THEN** numeric values use appropriate precision (e.g., 1e-4 for learning rate)
+- **AND** boolean values display as "Yes" or "No"
+- **AND** array values display as comma-separated list
+- **AND** missing values display as "Not set"
 
