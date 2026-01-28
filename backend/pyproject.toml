@@ -101,11 +101,12 @@ filterwarnings = [
 source = ["app"]
 omit = [
     "app/services/generation.py",  # Exclude LLM/HuggingFace related code
+    "app/routers/*",  # Exclude routers from coverage per user request
     "alembic/*",
 ]
 
 [tool.coverage.report]
-fail_under = 50
+fail_under = 80
 show_missing = true
 exclude_lines = [
     "pragma: no cover",
