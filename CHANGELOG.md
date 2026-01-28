@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Adapter Rename Functionality** (2026-01-28)
+  - Inline edit on adapter detail page - click name to edit
+  - Rename dialog on adapter list page via pencil icon button
+  - Name validation (1-100 characters, non-empty)
+  - New `Dialog` UI component (`@radix-ui/react-dialog`)
 - **Feedback System Refactoring to RLHF Industry Standard** (2026-01-26)
   - New `quality_ratings` table for Supervised Fine-Tuning (SFT) data
   - New `preference_pairs` table for Direct Preference Optimization (DPO) with same-prompt enforcement

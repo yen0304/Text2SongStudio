@@ -19,6 +19,8 @@ import {
   Check,
   Settings,
   Trash2,
+  Pencil,
+  X,
 } from 'lucide-react';
 
 export default function AdapterDetailPage() {
@@ -34,6 +36,12 @@ export default function AdapterDetailPage() {
   const [newVersion, setNewVersion] = useState({ version: '', description: '' });
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  
+  // Rename state
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState('');
+  const [savingName, setSavingName] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
@@ -112,6 +120,66 @@ export default function AdapterDetailPage() {
     }
   };
 
+  const startEditingName = () => {
+    if (adapter) {
+      setEditedName(adapter.name);
+      setNameError(null);
+      setIsEditingName(true);
+    }
+  };
+
+  const cancelEditingName = () => {
+    setIsEditingName(false);
+    setEditedName('');
+    setNameError(null);
+  };
+
+  const validateName = (name: string): string | null => {
+    if (!name.trim()) {
+      return 'Name cannot be empty';
+    }
+    if (name.length > 100) {
+      return 'Name must be 100 characters or less';
+    }
+    return null;
+  };
+
+  const handleSaveName = async () => {
+    const trimmedName = editedName.trim();
+    const error = validateName(trimmedName);
+    if (error) {
+      setNameError(error);
+      return;
+    }
+
+    if (trimmedName === adapter?.name) {
+      cancelEditingName();
+      return;
+    }
+
+    setSavingName(true);
+    try {
+      await adaptersApi.update(adapterId, { name: trimmedName });
+      setAdapter(prev => prev ? { ...prev, name: trimmedName } : null);
+      setIsEditingName(false);
+      setEditedName('');
+    } catch (error) {
+      console.error('Failed to rename adapter:', error);
+      setNameError('Failed to save name');
+    } finally {
+      setSavingName(false);
+    }
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSaveName();
+    } else if (e.key === 'Escape') {
+      cancelEditingName();
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -134,7 +202,52 @@ export default function AdapterDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={adapter.name}
+        title={
+          isEditingName ? (
+            <div className="flex items-center gap-2">
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={editedName}
+                    onChange={(e) => {
+                      setEditedName(e.target.value);
+                      setNameError(null);
+                    }}
+                    onKeyDown={handleNameKeyDown}
+                    className="h-8 text-lg font-semibold w-64"
+                    autoFocus
+                    disabled={savingName}
+                    maxLength={100}
+                  />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleSaveName}
+                    disabled={savingName}
+                  >
+                    {savingName ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={cancelEditingName}
+                    disabled={savingName}
+                  >
+                    <X size={16} />
+                  </Button>
+                </div>
+                {nameError && (
+                  <span className="text-xs text-destructive mt-1">{nameError}</span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 group cursor-pointer" onClick={startEditingName}>
+              <span>{adapter.name}</span>
+              <Pencil size={16} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+          )
+        }
         description={adapter.description || undefined}
         breadcrumb={[
           { label: 'Adapters', href: '/adapters' },

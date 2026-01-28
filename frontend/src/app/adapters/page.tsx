@@ -5,17 +5,25 @@ import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { adaptersApi, Adapter } from '@/lib/api';
 import {
   Loader2,
-  Plus,
   Package,
   Archive,
   GitBranch,
   Zap,
   Trash2,
+  Pencil,
 } from 'lucide-react';
 
 export default function AdaptersPage() {
@@ -28,11 +36,14 @@ export default function AdaptersPage() {
     total_versions: number;
   } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [newAdapter, setNewAdapter] = useState({ name: '', description: '', base_model: 'musicgen-small' });
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  
+  // Rename state
+  const [renameAdapter, setRenameAdapter] = useState<Adapter | null>(null);
+  const [newName, setNewName] = useState('');
+  const [renaming, setRenaming] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
 
   const fetchAdapters = async () => {
     try {
@@ -52,27 +63,6 @@ export default function AdaptersPage() {
   useEffect(() => {
     fetchAdapters();
   }, []);
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newAdapter.name.trim()) return;
-
-    setCreating(true);
-    try {
-      await adaptersApi.create({
-        name: newAdapter.name,
-        description: newAdapter.description || undefined,
-        base_model: newAdapter.base_model,
-      });
-      setShowCreateForm(false);
-      setNewAdapter({ name: '', description: '', base_model: 'musicgen-small' });
-      fetchAdapters();
-    } catch (error) {
-      console.error('Failed to create adapter:', error);
-    } finally {
-      setCreating(false);
-    }
-  };
 
   const handleDelete = async (adapterId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -94,6 +84,57 @@ export default function AdaptersPage() {
     }
   };
 
+  const openRenameDialog = (adapter: Adapter, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRenameAdapter(adapter);
+    setNewName(adapter.name);
+    setNameError(null);
+  };
+
+  const closeRenameDialog = () => {
+    setRenameAdapter(null);
+    setNewName('');
+    setNameError(null);
+  };
+
+  const validateName = (name: string): string | null => {
+    if (!name.trim()) {
+      return 'Name cannot be empty';
+    }
+    if (name.length > 100) {
+      return 'Name must be 100 characters or less';
+    }
+    return null;
+  };
+
+  const handleRename = async () => {
+    if (!renameAdapter) return;
+
+    const trimmedName = newName.trim();
+    const error = validateName(trimmedName);
+    if (error) {
+      setNameError(error);
+      return;
+    }
+
+    if (trimmedName === renameAdapter.name) {
+      closeRenameDialog();
+      return;
+    }
+
+    setRenaming(true);
+    try {
+      await adaptersApi.update(renameAdapter.id, { name: trimmedName });
+      closeRenameDialog();
+      fetchAdapters();
+    } catch (error) {
+      console.error('Failed to rename adapter:', error);
+      setNameError('Failed to save name');
+    } finally {
+      setRenaming(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -106,14 +147,8 @@ export default function AdaptersPage() {
     <div className="space-y-6">
       <PageHeader
         title="Adapters"
-        description="Manage LoRA adapters and their version history"
+        description="LoRA adapters are automatically created when training completes successfully"
         breadcrumb={[{ label: 'Adapters' }]}
-        actions={
-          <Button onClick={() => setShowCreateForm(!showCreateForm)}>
-            <Plus size={16} />
-            <span className="ml-2">New Adapter</span>
-          </Button>
-        }
       />
 
       {/* Stats Cards */}
@@ -174,59 +209,6 @@ export default function AdaptersPage() {
         </div>
       )}
 
-      {/* Create Form */}
-      {showCreateForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Create New Adapter</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Name</label>
-                  <Input
-                    placeholder="e.g., jazz-style-v2"
-                    value={newAdapter.name}
-                    onChange={(e) => setNewAdapter({ ...newAdapter, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Base Model</label>
-                  <select
-                    className="w-full h-10 px-3 rounded-md border border-input bg-background"
-                    value={newAdapter.base_model}
-                    onChange={(e) => setNewAdapter({ ...newAdapter, base_model: e.target.value })}
-                  >
-                    <option value="musicgen-small">MusicGen Small</option>
-                    <option value="musicgen-medium">MusicGen Medium</option>
-                    <option value="musicgen-large">MusicGen Large</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-2 block">Description</label>
-                <Input
-                  placeholder="Brief description of the adapter"
-                  value={newAdapter.description}
-                  onChange={(e) => setNewAdapter({ ...newAdapter, description: e.target.value })}
-                />
-              </div>
-              <div className="flex gap-2 justify-end">
-                <Button type="button" variant="outline" onClick={() => setShowCreateForm(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={creating || !newAdapter.name.trim()}>
-                  {creating && <Loader2 size={16} className="animate-spin mr-2" />}
-                  Create Adapter
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Adapters Table */}
       <Card>
         <CardHeader>
@@ -237,13 +219,12 @@ export default function AdaptersPage() {
             <div className="py-12 text-center">
               <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="font-medium mb-2">No adapters yet</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Create your first LoRA adapter to customize model behavior
+              <p className="text-sm text-muted-foreground">
+                Adapters are automatically created when training runs complete successfully.
               </p>
-              <Button onClick={() => setShowCreateForm(true)}>
-                <Plus size={16} className="mr-2" />
-                Create First Adapter
-              </Button>
+              <p className="text-sm text-muted-foreground mt-2">
+                Start by creating a dataset with rated samples, then run an experiment.
+              </p>
             </div>
           ) : (
             <table className="w-full">
@@ -304,6 +285,14 @@ export default function AdaptersPage() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={(e) => openRenameDialog(adapter, e)}
+                          title="Rename adapter"
+                        >
+                          <Pencil size={14} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             router.push(`/adapters/${adapter.id}`);
@@ -331,6 +320,49 @@ export default function AdaptersPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Rename Dialog */}
+      <Dialog open={!!renameAdapter} onOpenChange={(open: boolean) => !open && closeRenameDialog()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rename Adapter</DialogTitle>
+            <DialogDescription>
+              Enter a new name for the adapter. This helps identify it when selecting adapters for generation.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              value={newName}
+              onChange={(e) => {
+                setNewName(e.target.value);
+                setNameError(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleRename();
+                }
+              }}
+              placeholder="Adapter name"
+              maxLength={100}
+              disabled={renaming}
+              autoFocus
+            />
+            {nameError && (
+              <p className="text-sm text-destructive mt-2">{nameError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeRenameDialog} disabled={renaming}>
+              Cancel
+            </Button>
+            <Button onClick={handleRename} disabled={renaming}>
+              {renaming && <Loader2 size={16} className="animate-spin mr-2" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
