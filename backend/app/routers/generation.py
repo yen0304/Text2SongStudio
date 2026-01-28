@@ -40,7 +40,7 @@ async def submit_generation(
     if not prompt:
         raise HTTPException(status_code=404, detail="Prompt not found")
 
-    # Verify adapter is not soft-deleted (if provided)
+    # Verify adapter is active (if provided)
     if data.adapter_id:
         adapter_result = await db.execute(
             select(Adapter).where(Adapter.id == data.adapter_id)
@@ -48,9 +48,10 @@ async def submit_generation(
         adapter = adapter_result.scalar_one_or_none()
         if not adapter:
             raise HTTPException(status_code=404, detail="Adapter not found")
-        if adapter.deleted_at:
+        if not adapter.is_active or adapter.status == "archived":
             raise HTTPException(
-                status_code=400, detail="Cannot use deleted adapter for generation"
+                status_code=400,
+                detail="Cannot use inactive or archived adapter for generation",
             )
 
     # Create job

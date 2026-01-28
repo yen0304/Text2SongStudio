@@ -69,7 +69,7 @@ async def list_jobs(
                     prompt.text[:80] + "..." if len(prompt.text) > 80 else prompt.text
                 )
 
-        # Get adapter name (show "Deleted Adapter" for soft-deleted adapters)
+        # Get adapter name (show "Archived Adapter" for inactive/archived adapters)
         adapter_name = None
         if job.adapter_id:
             adapter_result = await db.execute(
@@ -77,8 +77,8 @@ async def list_jobs(
             )
             adapter = adapter_result.scalar_one_or_none()
             if adapter:
-                if adapter.deleted_at:
-                    adapter_name = "Deleted Adapter"
+                if not adapter.is_active or adapter.status == "archived":
+                    adapter_name = "Archived Adapter"
                 else:
                     adapter_name = f"{adapter.name} v{adapter.version}"
 
@@ -214,8 +214,8 @@ async def get_job(
         )
         adapter = adapter_result.scalar_one_or_none()
         if adapter:
-            if adapter.deleted_at:
-                adapter_name = "Deleted Adapter"
+            if not adapter.is_active or adapter.status == "archived":
+                adapter_name = "Archived Adapter"
             else:
                 adapter_name = f"{adapter.name} v{adapter.version}"
 
