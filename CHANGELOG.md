@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Training Loss Visualization** (2026-01-28)
+  - Real-time training metric visualization on experiment detail page
+  - New `TrainingMetricsChart` component with line charts using Recharts
+  - Supports loss, learning_rate, grad_norm, and DPO-specific metrics
+  - Live polling during active training runs
+  - Multi-run comparison with overlaid curves
+  - Metric type selector to switch between different metrics
+  - Backend metric parsing service extracting metrics from training logs
+  - New API endpoint: `GET /experiments/{id}/runs/{run_id}/metrics`
+  - Automatic metric downsampling for large training runs (2000+ points)
 - **Adapter Rename Functionality** (2026-01-28)
   - Inline edit on adapter detail page - click name to edit
   - Rename dialog on adapter list page via pencil icon button

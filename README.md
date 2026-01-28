@@ -132,7 +132,7 @@ cd text2song-studio
 2. Start services with Docker Compose:
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 3. Access the application:
@@ -336,13 +336,13 @@ npm run test:coverage
 
 ```bash
 # Build and start all services
-docker-compose up -d --build
+docker compose up -d --build
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # Stop services
-docker-compose down
+docker compose down
 ```
 
 ### Production Deployment
