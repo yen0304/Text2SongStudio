@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { experimentsApi, datasetsApi, Experiment, Dataset } from '@/lib/api';
 import { Select } from '@/components/ui/select';
+import { ExperimentConfigForm, ExperimentConfig } from '@/components/experiments';
 import {
   Loader2,
   Plus,
@@ -34,6 +35,9 @@ import {
   Archive,
   ArchiveRestore,
   Database,
+  ChevronDown,
+  ChevronUp,
+  Settings,
 } from 'lucide-react';
 
 const statusConfig: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
@@ -69,6 +73,12 @@ export default function ExperimentsPage() {
   const [showArchived, setShowArchived] = useState(false);
   const [archiveTarget, setArchiveTarget] = useState<Experiment | null>(null);
   const [archiving, setArchiving] = useState(false);
+  const [showConfigSection, setShowConfigSection] = useState(false);
+  const [newConfig, setNewConfig] = useState<ExperimentConfig>({});
+
+  // Get the selected dataset to determine if it's preference type
+  const selectedDataset = datasets.find(d => d.id === selectedDatasetId);
+  const isPreferenceDataset = selectedDataset?.type === 'preference';
 
   const fetchExperiments = async () => {
     try {
@@ -100,14 +110,20 @@ export default function ExperimentsPage() {
     
     setCreating(true);
     try {
+      // Only include config if any values were set
+      const configToSend = Object.keys(newConfig).length > 0 ? newConfig as Record<string, unknown> : undefined;
+      
       await experimentsApi.create({
         name: newName.trim(),
         description: newDescription.trim() || undefined,
         dataset_id: selectedDatasetId,
+        config: configToSend,
       });
       setNewName('');
       setNewDescription('');
       setSelectedDatasetId('');
+      setNewConfig({});
+      setShowConfigSection(false);
       setShowCreateForm(false);
       fetchExperiments();
     } catch (error) {
@@ -238,6 +254,36 @@ export default function ExperimentsPage() {
                   </p>
                 )}
               </div>
+
+              {/* Training Configuration Section */}
+              <div className="border-t pt-4 mt-4">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full justify-between text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowConfigSection(!showConfigSection)}
+                >
+                  <span className="flex items-center gap-2">
+                    <Settings size={16} />
+                    Training Configuration
+                  </span>
+                  {showConfigSection ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </Button>
+                {showConfigSection && (
+                  <div className="mt-4 p-4 bg-muted/30 rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Configure training hyperparameters. Leave empty to use defaults.
+                    </p>
+                    <ExperimentConfigForm
+                      config={newConfig}
+                      onChange={setNewConfig}
+                      compact={true}
+                      showDpo={isPreferenceDataset}
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-2">
                 <Button onClick={handleCreate} disabled={creating || !newName.trim() || !selectedDatasetId}>
                   {creating ? <Loader2 size={16} className="animate-spin mr-2" /> : null}

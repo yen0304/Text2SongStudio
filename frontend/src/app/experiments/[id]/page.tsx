@@ -20,6 +20,7 @@ import {
 import { experimentsApi, datasetsApi, ExperimentDetail, ExperimentRun, Dataset } from '@/lib/api';
 import { RunComparison } from '@/components/comparison/RunComparison';
 import { TrainingLogViewer } from '@/components/training/TrainingLogViewer';
+import { ExperimentConfigForm, ExperimentConfig, StartRunDialog } from '@/components/experiments';
 import {
   Loader2,
   ArrowLeft,
@@ -36,6 +37,9 @@ import {
   List,
   BarChart3,
   Settings,
+  Pencil,
+  Save,
+  X,
 } from 'lucide-react';
 
 const runStatusConfig: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
@@ -83,6 +87,19 @@ export default function ExperimentDetailPage() {
   // Pagination state
   const [runsPage, setRunsPage] = useState(1);
   const RUNS_PER_PAGE = 10;
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState('runs');
+
+  // Config editing state
+  const [isEditingConfig, setIsEditingConfig] = useState(false);
+  const [editedConfig, setEditedConfig] = useState<ExperimentConfig>({});
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
+  const [pendingTabChange, setPendingTabChange] = useState<string | null>(null);
+  
+  // Start Run dialog state
+  const [showStartRunDialog, setShowStartRunDialog] = useState(false);
 
   // Get the current run data from experiment (for real-time status updates)
   const viewingLogsRun = viewingLogsRunId 
@@ -136,6 +153,19 @@ export default function ExperimentDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [experimentId]);
 
+  // Warn before leaving page with unsaved changes
+  useEffect(() => {
+    if (!isEditingConfig) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isEditingConfig]);
+
   // Poll for updates when there are running runs
   const runStatuses = experiment?.runs.map(r => r.status).join(',') || '';
   useEffect(() => {
@@ -154,20 +184,47 @@ export default function ExperimentDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [experiment?.id, runStatuses]);
 
-  const handleStartRun = async () => {
+  const handleStartRun = async (runName?: string, configOverrides?: ExperimentConfig) => {
     setStartingRun(true);
     try {
-      const newRun = await experimentsApi.createRun(experimentId);
+      const newRun = await experimentsApi.createRun(experimentId, {
+        name: runName,
+        config: configOverrides as Record<string, unknown> | undefined,
+      });
       // Auto-select the new run for viewing
       setViewingLogsRunId(newRun.id);
       // Refresh to show new run
       await fetchExperiment();
     } catch (error) {
       console.error('Failed to start run:', error);
-      alert(`Failed to start run: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw error; // Re-throw so dialog can handle it
     } finally {
       setStartingRun(false);
     }
+  };
+
+  const handleTabChange = (newTab: string) => {
+    if (isEditingConfig && newTab !== activeTab) {
+      setPendingTabChange(newTab);
+      setShowUnsavedChangesDialog(true);
+    } else {
+      setActiveTab(newTab);
+    }
+  };
+
+  const confirmTabChange = () => {
+    if (pendingTabChange) {
+      setIsEditingConfig(false);
+      setEditedConfig({});
+      setActiveTab(pendingTabChange);
+      setPendingTabChange(null);
+    }
+    setShowUnsavedChangesDialog(false);
+  };
+
+  const cancelTabChange = () => {
+    setPendingTabChange(null);
+    setShowUnsavedChangesDialog(false);
   };
 
   const handleDeleteRun = async () => {
@@ -260,8 +317,8 @@ export default function ExperimentDetailPage() {
               <ArrowLeft size={16} />
               <span className="ml-2">Back</span>
             </Button>
-            <Button onClick={handleStartRun} disabled={startingRun}>
-              {startingRun ? <Loader2 size={16} className="animate-spin mr-2" /> : <Plus size={16} className="mr-2" />}
+            <Button onClick={() => setShowStartRunDialog(true)} disabled={startingRun}>
+              <Plus size={16} className="mr-2" />
               Start Run
             </Button>
           </div>
@@ -270,9 +327,9 @@ export default function ExperimentDetailPage() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col mt-6">
-        <Tabs defaultValue="runs" className="flex-1 flex flex-col">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col">
           <div className="flex items-center justify-between border-b px-1 flex-shrink-0">
-            <TabsList className="h-10">
+            <TabsList className="h-10">`
               <TabsTrigger value="runs" className="gap-2">
                 <List size={14} />
                 Runs
@@ -316,7 +373,7 @@ export default function ExperimentDetailPage() {
               {experiment.runs.length === 0 ? (
                 <div className="py-12 text-center text-muted-foreground">
                   <p className="mb-4">No runs yet</p>
-                  <Button onClick={handleStartRun} disabled={startingRun}>
+                  <Button onClick={() => setShowStartRunDialog(true)} disabled={startingRun}>
                     Start your first run
                   </Button>
                 </div>
@@ -593,13 +650,89 @@ export default function ExperimentDetailPage() {
 
             {/* Config Tab */}
             <TabsContent value="config" className="mt-0 p-4">
-              {experiment.config && Object.keys(experiment.config).length > 0 ? (
-                <pre className="text-sm bg-muted p-4 rounded-lg overflow-auto">
-                  {JSON.stringify(experiment.config, null, 2)}
-                </pre>
-              ) : (
-                <p className="text-muted-foreground text-center py-8">No configuration available</p>
-              )}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium">Training Configuration</h3>
+                  {!isEditingConfig ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditedConfig((experiment.config as ExperimentConfig) || {});
+                        setIsEditingConfig(true);
+                      }}
+                    >
+                      <Pencil size={14} className="mr-2" />
+                      Edit
+                    </Button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setIsEditingConfig(false);
+                          setEditedConfig({});
+                        }}
+                        disabled={savingConfig}
+                      >
+                        <X size={14} className="mr-2" />
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          setSavingConfig(true);
+                          try {
+                            await experimentsApi.update(experimentId, { config: editedConfig as Record<string, unknown> });
+                            setExperiment(prev => prev ? { ...prev, config: editedConfig as Record<string, unknown> } : null);
+                            setIsEditingConfig(false);
+                          } catch (error) {
+                            console.error('Failed to save config:', error);
+                          } finally {
+                            setSavingConfig(false);
+                          }
+                        }}
+                        disabled={savingConfig}
+                      >
+                        {savingConfig ? <Loader2 size={14} className="mr-2 animate-spin" /> : <Save size={14} className="mr-2" />}
+                        Save Changes
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                
+                {isEditingConfig ? (
+                  <ExperimentConfigForm
+                    config={editedConfig}
+                    onChange={setEditedConfig}
+                    compact={false}
+                    showDpo={datasets.find(d => d.id === experiment.dataset_id)?.type === 'preference'}
+                  />
+                ) : experiment.config && Object.keys(experiment.config).length > 0 ? (
+                  <ExperimentConfigForm
+                    config={experiment.config as ExperimentConfig}
+                    onChange={() => {}}
+                    compact={false}
+                    disabled={true}
+                    showDpo={datasets.find(d => d.id === experiment.dataset_id)?.type === 'preference'}
+                  />
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground mb-4">No configuration set. Training will use default values.</p>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setEditedConfig({});
+                        setIsEditingConfig(true);
+                      }}
+                    >
+                      <Plus size={14} className="mr-2" />
+                      Add Configuration
+                    </Button>
+                  </div>
+                )}
+              </div>
             </TabsContent>
           </Tabs>
       </div>
@@ -656,6 +789,41 @@ export default function ExperimentDetailPage() {
             >
               {deleting ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
               Delete All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Start Run Dialog */}
+      <StartRunDialog
+        open={showStartRunDialog}
+        onOpenChange={setShowStartRunDialog}
+        experimentConfig={experiment?.config as ExperimentConfig | null}
+        isPreferenceDataset={
+          (() => {
+            const dataset = datasets.find(d => d.id === experiment?.dataset_id);
+            return dataset?.type === 'preference';
+          })()
+        }
+        onStart={async (runName, configOverrides) => {
+          await handleStartRun(runName, configOverrides);
+          setShowStartRunDialog(false);
+        }}
+      />
+
+      {/* Unsaved Changes Dialog */}
+      <AlertDialog open={showUnsavedChangesDialog} onOpenChange={setShowUnsavedChangesDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes to the configuration. If you leave this tab now, these changes will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelTabChange}>Stay and Continue Editing</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmTabChange} className="bg-destructive hover:bg-destructive/90">
+              Discard Changes
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
