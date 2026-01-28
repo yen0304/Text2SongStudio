@@ -24,8 +24,50 @@ export interface AdapterVersion {
   created_at: string;
 }
 
+/**
+ * Training configuration stored after adapter training completes
+ */
+export interface TrainingConfig {
+  // Model
+  base_model?: string;
+  dataset_type?: string;
+  
+  // LoRA
+  lora_r?: number;
+  lora_alpha?: number;
+  lora_dropout?: number;
+  lora_target_modules?: string[];
+  
+  // Training
+  num_epochs?: number;
+  batch_size?: number;
+  learning_rate?: number;
+  gradient_accumulation_steps?: number;
+  warmup_steps?: number;
+  weight_decay?: number;
+  max_grad_norm?: number;
+  
+  // DPO
+  dpo_beta?: number;
+  
+  // Hardware
+  fp16?: boolean;
+  device?: string;
+  
+  // Checkpointing
+  save_steps?: number;
+  save_total_limit?: number;
+  eval_steps?: number;
+  early_stopping_patience?: number;
+  early_stopping_threshold?: number;
+  
+  // Results
+  final_loss?: number;
+}
+
 export interface AdapterDetail extends Adapter {
   versions: AdapterVersion[];
+  training_config: TrainingConfig | null;
 }
 
 export interface AdapterTimelineEvent {

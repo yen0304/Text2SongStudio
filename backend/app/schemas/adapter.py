@@ -64,6 +64,7 @@ class AdapterVersionRead(BaseModel):
 
 class AdapterDetailRead(AdapterRead):
     versions: list[AdapterVersionRead] = []
+    training_config: dict[str, Any] | None = None
 
 
 class AdapterTimelineEvent(BaseModel):

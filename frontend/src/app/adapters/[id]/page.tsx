@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { AdapterTimelineView } from '@/components/adapters';
+import { AdapterTimelineView, AdapterConfigTab } from '@/components/adapters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { adaptersApi, AdapterDetail, AdapterTimeline, AdapterVersion } from '@/lib/api';
 import {
   Loader2,
@@ -21,6 +22,7 @@ import {
   Trash2,
   Pencil,
   X,
+  LayoutDashboard,
 } from 'lucide-react';
 
 export default function AdapterDetailPage() {
@@ -362,87 +364,135 @@ export default function AdapterDetailPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Versions List */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <GitBranch size={20} />
-              Versions
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {adapter.versions.length === 0 ? (
-              <div className="py-8 text-center text-muted-foreground">
-                <p className="mb-4">No versions created yet</p>
-                <Button onClick={() => setShowVersionForm(true)} variant="outline" size="sm">
-                  Create First Version
-                </Button>
-              </div>
-            ) : (
-              <div className="divide-y divide-border">
-                {adapter.versions.map((version) => (
-                  <div
-                    key={version.id}
-                    className={`p-4 ${version.is_active ? 'bg-green-500/5' : ''}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-medium">v{version.version}</span>
-                        {version.is_active && (
-                          <Badge variant="secondary" className="bg-green-500/10 text-green-600">
-                            <Check size={12} className="mr-1" />
-                            Active
-                          </Badge>
-                        )}
-                      </div>
-                      {!version.is_active && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleActivateVersion(version.id)}
-                        >
-                          Activate
-                        </Button>
-                      )}
-                    </div>
-                    {version.description && (
-                      <p className="text-sm text-muted-foreground mt-1">{version.description}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Created {new Date(version.created_at).toLocaleDateString()}
-                    </p>
+      {/* Tabs for Overview and Configuration */}
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="overview" className="flex items-center gap-2">
+            <LayoutDashboard size={16} />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="configuration" className="flex items-center gap-2">
+            <Settings size={16} />
+            Configuration
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Versions List */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <GitBranch size={20} />
+                  Versions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {adapter.versions.length === 0 ? (
+                  <div className="py-8 text-center text-muted-foreground">
+                    <p className="mb-4">No versions created yet</p>
+                    <Button onClick={() => setShowVersionForm(true)} variant="outline" size="sm">
+                      Create First Version
+                    </Button>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {adapter.versions.map((version) => (
+                      <div
+                        key={version.id}
+                        className={`p-4 ${version.is_active ? 'bg-green-500/5' : ''}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-medium">v{version.version}</span>
+                            {version.is_active && (
+                              <Badge variant="secondary" className="bg-green-500/10 text-green-600">
+                                <Check size={12} className="mr-1" />
+                                Active
+                              </Badge>
+                            )}
+                          </div>
+                          {!version.is_active && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleActivateVersion(version.id)}
+                            >
+                              Activate
+                            </Button>
+                          )}
+                        </div>
+                        {version.description && (
+                          <p className="text-sm text-muted-foreground mt-1">{version.description}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Created {new Date(version.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-        {/* Config */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings size={20} />
-              Configuration
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {adapter.config && Object.keys(adapter.config).length > 0 ? (
-              <pre className="text-sm bg-muted p-4 rounded-lg overflow-auto">
-                {JSON.stringify(adapter.config, null, 2)}
-              </pre>
-            ) : (
-              <div className="py-8 text-center text-muted-foreground">
-                No configuration set
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            {/* Quick Config Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings size={20} />
+                  Quick Config
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {adapter.training_config ? (
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Learning Rate</span>
+                      <span className="font-mono">{adapter.training_config.learning_rate}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">LoRA Rank</span>
+                      <span className="font-mono">{adapter.training_config.lora_r}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Epochs</span>
+                      <span className="font-mono">{adapter.training_config.num_epochs}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Batch Size</span>
+                      <span className="font-mono">{adapter.training_config.batch_size}</span>
+                    </div>
+                    <div className="pt-2 border-t">
+                      <Button
+                        variant="link"
+                        className="p-0 h-auto text-xs"
+                        onClick={() => {
+                          const tabsList = document.querySelector('[data-state="active"][value="overview"]');
+                          const configTab = document.querySelector('[value="configuration"]') as HTMLButtonElement;
+                          configTab?.click();
+                        }}
+                      >
+                        View full configuration →
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-muted-foreground">
+                    No training configuration available
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-      {/* Timeline */}
-      {timeline && <AdapterTimelineView timeline={timeline} />}
+          {/* Timeline */}
+          {timeline && <AdapterTimelineView timeline={timeline} />}
+        </TabsContent>
+
+        <TabsContent value="configuration">
+          <AdapterConfigTab trainingConfig={adapter.training_config} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

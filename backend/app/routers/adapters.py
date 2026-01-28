@@ -127,6 +127,7 @@ async def get_adapter(
         is_active=adapter.is_active,
         created_at=adapter.created_at,
         updated_at=adapter.updated_at,
+        training_config=adapter.training_config,
         versions=[
             AdapterVersionRead(
                 id=v.id,
