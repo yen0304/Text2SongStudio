@@ -12,7 +12,9 @@ import type {
   ExperimentMetrics,
   CreateExperimentRequest,
   UpdateExperimentRequest,
-  CreateRunRequest
+  CreateRunRequest,
+  RunMetricsResponse,
+  GetRunMetricsParams
 } from '../types/experiments';
 import type { PaginatedResponse } from '../types/common';
 
@@ -109,4 +111,17 @@ export const experimentsApi = {
    */
   getMetrics: (experimentId: string) =>
     fetchApi<ExperimentMetrics>(`/experiments/${experimentId}/metrics`),
+
+  /**
+   * Get time-series metrics for a specific run
+   * Returns metrics for visualization (loss, learning_rate, grad_norm, etc.)
+   */
+  getRunMetrics: (experimentId: string, runId: string, params?: GetRunMetricsParams) => {
+    const query = buildQueryString({
+      metric_type: params?.metric_type,
+      min_step: params?.min_step,
+      max_step: params?.max_step,
+    });
+    return fetchApi<RunMetricsResponse>(`/experiments/${experimentId}/runs/${runId}/metrics${query}`);
+  },
 };

@@ -67,3 +67,42 @@ export interface CreateRunRequest {
   name?: string;
   config?: Record<string, unknown>;
 }
+
+/**
+ * A single metric data point in the time-series
+ */
+export interface MetricDataPoint {
+  step: number;
+  value: number;
+  timestamp: string;
+}
+
+/**
+ * Response from the run metrics endpoint
+ */
+export interface RunMetricsResponse {
+  run_id: string;
+  metrics: {
+    loss?: MetricDataPoint[];
+    learning_rate?: MetricDataPoint[];
+    grad_norm?: MetricDataPoint[];
+    epoch?: MetricDataPoint[];
+    rewards_chosen?: MetricDataPoint[];
+    rewards_rejected?: MetricDataPoint[];
+    [key: string]: MetricDataPoint[] | undefined;
+  };
+  metadata: {
+    last_updated: string | null;
+    is_complete: boolean;
+    status: string;
+  };
+}
+
+/**
+ * Parameters for the run metrics endpoint
+ */
+export interface GetRunMetricsParams {
+  metric_type?: string;
+  min_step?: number;
+  max_step?: number;
+}
