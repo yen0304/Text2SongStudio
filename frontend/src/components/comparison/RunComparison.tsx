@@ -4,11 +4,13 @@ import { ExperimentRun } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { TrainingMetricsChart } from '@/components/training/TrainingMetricsChart';
 import { X, TrendingUp, TrendingDown, Minus, Trophy, Clock, Activity, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 
 interface RunComparisonProps {
   runs: ExperimentRun[];
+  experimentId: string;
   bestRunId?: string | null;
   onClose: () => void;
 }
@@ -114,7 +116,7 @@ function RunCard({ run, bestRunId, bestLoss }: { run: ExperimentRun; bestRunId: 
   );
 }
 
-export function RunComparison({ runs, bestRunId, onClose }: RunComparisonProps) {
+export function RunComparison({ runs, experimentId, bestRunId, onClose }: RunComparisonProps) {
   if (runs.length === 0) {
     return null;
   }
@@ -131,6 +133,12 @@ export function RunComparison({ runs, bestRunId, onClose }: RunComparisonProps) 
     }
   });
   const metricKeys = Array.from(allMetricKeys).filter(k => k !== 'loss');
+
+  // Build run names map
+  const runNames = runs.reduce((acc, run) => {
+    acc[run.id] = run.name || run.id.slice(0, 8);
+    return acc;
+  }, {} as Record<string, string>);
 
   return (
     <Card className="border-2 border-primary/20">
@@ -293,6 +301,22 @@ export function RunComparison({ runs, bestRunId, onClose }: RunComparisonProps) 
             </tbody>
           </table>
         </div>
+
+        {/* Loss Comparison Chart */}
+        {runs.length >= 2 && (
+          <div className="mt-6">
+            <h4 className="font-medium mb-3">Loss Comparison</h4>
+            <TrainingMetricsChart
+              experimentId={experimentId}
+              runIds={runs.map(r => r.id)}
+              metricType="loss"
+              height="300px"
+              isLive={false}
+              runNames={runNames}
+              showMetricSelector={true}
+            />
+          </div>
+        )}
 
         {/* Summary */}
         {runs.length >= 2 && bestLoss !== null && (

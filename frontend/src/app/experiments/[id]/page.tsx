@@ -20,6 +20,7 @@ import {
 import { experimentsApi, datasetsApi, ExperimentDetail, ExperimentRun, Dataset } from '@/lib/api';
 import { RunComparison } from '@/components/comparison/RunComparison';
 import { TrainingLogViewer } from '@/components/training/TrainingLogViewer';
+import { TrainingMetricsChart } from '@/components/training/TrainingMetricsChart';
 import { ExperimentConfigForm, ExperimentConfig, StartRunDialog } from '@/components/experiments';
 import {
   Loader2,
@@ -583,6 +584,21 @@ export default function ExperimentDetailPage() {
                       )}
                     </div>
                   </div>
+
+                  {/* Training Metrics Chart */}
+                  {viewingLogsRun && (
+                    <div className="mt-4">
+                      <TrainingMetricsChart
+                        experimentId={experimentId}
+                        runIds={viewingLogsRun.id}
+                        metricType="loss"
+                        height="250px"
+                        isLive={viewingLogsRun.status === 'running'}
+                        showMetricSelector={true}
+                        runNames={{ [viewingLogsRun.id]: viewingLogsRun.name || viewingLogsRun.id.slice(0, 8) }}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </TabsContent>
@@ -741,6 +757,7 @@ export default function ExperimentDetailPage() {
       {showComparison && selectedRuns.length >= 2 && (
         <RunComparison
           runs={experiment.runs.filter(r => selectedRuns.includes(r.id))}
+          experimentId={experimentId}
           bestRunId={experiment.best_run_id}
           onClose={() => setShowComparison(false)}
         />

@@ -3,7 +3,7 @@ import { render, screen } from '@/test-utils';
 import { RunComparison } from '@/components/comparison/RunComparison';
 import { ExperimentRun } from '@/lib/api';
 
-// Mock lucide-react icons
+// Mock lucide-react icons (including all icons used by TrainingMetricsChart)
 vi.mock('lucide-react', () => ({
   X: () => <span data-testid="x-icon" />,
   TrendingUp: () => <span data-testid="trending-up-icon" />,
@@ -14,7 +14,44 @@ vi.mock('lucide-react', () => ({
   Activity: () => <span data-testid="activity-icon" />,
   ChevronDown: () => <span data-testid="chevron-down-icon" />,
   ChevronUp: () => <span data-testid="chevron-up-icon" />,
+  Loader2: () => <span data-testid="loader-icon" />,
+  AlertCircle: () => <span data-testid="alert-circle-icon" />,
+  BarChart3: () => <span data-testid="bar-chart-icon" />,
 }));
+
+// Mock recharts - avoid rendering actual SVG (needed by TrainingMetricsChart)
+vi.mock('recharts', () => {
+  const React = require('react');
+  return {
+    ResponsiveContainer: ({ children }: { children: React.ReactNode }) => 
+      React.createElement('div', { 'data-testid': 'responsive-container' }, children),
+    LineChart: ({ children }: { children: React.ReactNode }) => 
+      React.createElement('div', { 'data-testid': 'line-chart' }, children),
+    Line: () => React.createElement('div', { 'data-testid': 'line' }),
+    XAxis: () => React.createElement('div', { 'data-testid': 'x-axis' }),
+    YAxis: () => React.createElement('div', { 'data-testid': 'y-axis' }),
+    CartesianGrid: () => React.createElement('div', { 'data-testid': 'cartesian-grid' }),
+    Tooltip: () => React.createElement('div', { 'data-testid': 'tooltip' }),
+    Legend: () => React.createElement('div', { 'data-testid': 'legend' }),
+    ReferenceLine: () => React.createElement('div', { 'data-testid': 'reference-line' }),
+  };
+});
+
+// Mock experimentsApi for TrainingMetricsChart
+vi.mock('@/lib/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/api')>();
+  return {
+    ...actual,
+    experimentsApi: {
+      ...actual.experimentsApi,
+      getRunMetrics: vi.fn().mockResolvedValue({
+        run_id: 'run-1',
+        metrics: {},
+        metadata: { last_updated: null, is_complete: true, status: 'completed' },
+      }),
+    },
+  };
+});
 
 const mockRuns: ExperimentRun[] = [
   {
