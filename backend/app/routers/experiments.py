@@ -1,5 +1,6 @@
 import asyncio
 import shutil
+import zlib
 from datetime import datetime
 from pathlib import Path
 from uuid import UUID
@@ -10,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import Dataset, Experiment, ExperimentRun, ExperimentStatus, RunStatus
+from app.models.training_log import TrainingLog
 from app.schemas import (
     ExperimentCreate,
     ExperimentDetailResponse,
@@ -19,6 +21,7 @@ from app.schemas import (
     ExperimentRunResponse,
     ExperimentUpdate,
 )
+from app.services.metric_parser import MetricParser
 from app.services.training import TrainingService
 
 # Backend root directory for adapter storage
@@ -461,10 +464,6 @@ async def get_run_metrics(
     Parses metrics fresh from the training logs for accurate visualization.
     Supports filtering by metric type and step range.
     """
-    import zlib
-    from app.models.training_log import TrainingLog
-    from app.services.metric_parser import MetricParser
-
     # Verify experiment exists
     result = await db.execute(select(Experiment).where(Experiment.id == experiment_id))
     if not result.scalar_one_or_none():
@@ -498,7 +497,7 @@ async def get_run_metrics(
             # Parse metrics from logs
             parser = MetricParser()
             metrics = parser.parse_log_chunk(log_data)
-        except Exception as e:
+        except Exception:
             # Fall back to cached metrics if parsing fails
             metrics = run.metrics or {}
 
