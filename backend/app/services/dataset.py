@@ -381,20 +381,18 @@ class DatasetService:
         )
 
         tag_result = await self.db.execute(tag_query)
-        positive_tags = {}
-        negative_tags = {}
+        tag_frequency = {}
         for tag, is_positive, count in tag_result.all():
-            if is_positive:
-                positive_tags[tag] = count
-            else:
-                negative_tags[tag] = count
+            # Combine positive and negative tags into a single frequency dict
+            # Prefix negative tags with "-" to distinguish them
+            key = tag if is_positive else f"-{tag}"
+            tag_frequency[key] = count
 
         return {
             "rating_distribution": rating_distribution,
             "unique_prompts": unique_prompts,
             "unique_adapters": unique_adapters,
-            "positive_tag_frequency": positive_tags,
-            "negative_tag_frequency": negative_tags,
+            "tag_frequency": tag_frequency,
         }
 
     async def _get_preference_stats(
@@ -429,8 +427,11 @@ class DatasetService:
         margin_row = margin_result.first()
 
         return {
-            "total_pairs": total_pairs,
+            "rating_distribution": {},
             "unique_prompts": unique_prompts,
+            "unique_adapters": 0,
+            "tag_frequency": {},
+            "total_pairs": total_pairs,
             "avg_margin": float(margin_row[0])
             if margin_row and margin_row[0]
             else None,

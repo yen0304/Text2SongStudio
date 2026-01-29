@@ -236,20 +236,59 @@ class TrainingService:
         ]
 
         # Map experiment config to CLI arguments
-        if config.get("epochs"):
-            cmd.extend(["--epochs", str(config["epochs"])])
-        if config.get("batch_size"):
+        # Use `is not None` to allow falsy values like 0 or False
+        if config.get("num_epochs") is not None:
+            cmd.extend(["--epochs", str(config["num_epochs"])])
+        if config.get("batch_size") is not None:
             cmd.extend(["--batch-size", str(config["batch_size"])])
-        if config.get("learning_rate"):
+        if config.get("learning_rate") is not None:
             cmd.extend(["--lr", str(config["learning_rate"])])
-        if config.get("lora_r"):
+        if config.get("lora_r") is not None:
             cmd.extend(["--lora-r", str(config["lora_r"])])
-        if config.get("lora_alpha"):
+        if config.get("lora_alpha") is not None:
             cmd.extend(["--lora-alpha", str(config["lora_alpha"])])
-        if config.get("base_model"):
+        if config.get("lora_dropout") is not None:
+            cmd.extend(["--lora-dropout", str(config["lora_dropout"])])
+        if config.get("base_model") is not None:
             cmd.extend(["--base-model", str(config["base_model"])])
-        if config.get("dpo_beta"):
+        if config.get("dpo_beta") is not None:
             cmd.extend(["--beta", str(config["dpo_beta"])])
+        if config.get("gradient_accumulation_steps") is not None:
+            cmd.extend(
+                [
+                    "--gradient-accumulation-steps",
+                    str(config["gradient_accumulation_steps"]),
+                ]
+            )
+        if config.get("warmup_steps") is not None:
+            cmd.extend(["--warmup-steps", str(config["warmup_steps"])])
+        if config.get("weight_decay") is not None:
+            cmd.extend(["--weight-decay", str(config["weight_decay"])])
+        if config.get("max_grad_norm") is not None:
+            cmd.extend(["--max-grad-norm", str(config["max_grad_norm"])])
+        if config.get("fp16") is not None:
+            cmd.extend(["--fp16", str(config["fp16"]).lower()])
+        if config.get("save_steps") is not None:
+            cmd.extend(["--save-steps", str(config["save_steps"])])
+        if config.get("save_total_limit") is not None:
+            cmd.extend(["--save-total-limit", str(config["save_total_limit"])])
+        if config.get("eval_steps") is not None:
+            cmd.extend(["--eval-steps", str(config["eval_steps"])])
+        if config.get("early_stopping_enabled") is not None:
+            cmd.extend(
+                [
+                    "--early-stopping-enabled",
+                    str(config["early_stopping_enabled"]).lower(),
+                ]
+            )
+        if config.get("early_stopping_patience") is not None:
+            cmd.extend(
+                ["--early-stopping-patience", str(config["early_stopping_patience"])]
+            )
+        if config.get("early_stopping_threshold") is not None:
+            cmd.extend(
+                ["--early-stopping-threshold", str(config["early_stopping_threshold"])]
+            )
 
         # Generate version from timestamp
         version = datetime.utcnow().strftime("%Y.%m.%d.%H%M")

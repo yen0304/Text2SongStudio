@@ -137,16 +137,14 @@ def train_supervised(config: TrainingConfig):
 
     # Configure LoRA on the decoder (the part that generates audio from text)
     logger.info("Configuring LoRA...")
+    logger.info(f"Target modules: {config.lora_target_modules}")
     sys.stdout.flush()
-
-    # Target modules for MusicGen decoder
-    target_modules = ["q_proj", "v_proj", "k_proj", "out_proj", "fc1", "fc2"]
 
     lora_config = LoraConfig(
         r=config.lora_r,
         lora_alpha=config.lora_alpha,
         lora_dropout=config.lora_dropout,
-        target_modules=target_modules,
+        target_modules=config.lora_target_modules,
         task_type=TaskType.CAUSAL_LM,
     )
 
@@ -267,7 +265,8 @@ def train_supervised(config: TrainingConfig):
             loss.backward()
 
             if (batch_idx + 1) % config.gradient_accumulation_steps == 0:
-                torch.nn.utils.clip_grad_norm_(
+                # Calculate gradient norm before clipping
+                grad_norm = torch.nn.utils.clip_grad_norm_(
                     model.decoder.parameters(), config.max_grad_norm
                 )
                 optimizer.step()
@@ -275,12 +274,14 @@ def train_supervised(config: TrainingConfig):
                 optimizer.zero_grad()
                 global_step += 1
 
-                # Logging
+                # Logging with all metrics
                 if global_step % config.logging_steps == 0:
                     current_loss = loss.item() * config.gradient_accumulation_steps
+                    current_lr = scheduler.get_last_lr()[0]
                     logger.info(
                         f"Step {global_step}: loss={current_loss:.4f}, "
-                        f"lr={scheduler.get_last_lr()[0]:.2e}"
+                        f"learning_rate={current_lr:.2e}, "
+                        f"grad_norm={grad_norm:.4f}"
                     )
                     sys.stdout.flush()
 
@@ -294,15 +295,20 @@ def train_supervised(config: TrainingConfig):
                     sys.stdout.flush()
 
             epoch_loss += loss.item() * config.gradient_accumulation_steps
+            current_lr = scheduler.get_last_lr()[0]
             progress_bar.set_postfix(
-                loss=loss.item() * config.gradient_accumulation_steps
+                loss=loss.item() * config.gradient_accumulation_steps,
+                lr=f"{current_lr:.2e}",
             )
 
         avg_epoch_loss = epoch_loss / len(train_loader)
-        logger.info(f"Epoch {epoch + 1} average loss: {avg_epoch_loss:.4f}")
+        final_lr = scheduler.get_last_lr()[0]
+        logger.info(
+            f"Epoch {epoch + 1} average loss: {avg_epoch_loss:.4f}, learning_rate={final_lr:.2e}"
+        )
         sys.stdout.flush()
 
-        # Early stopping
+        # Track best model and optionally early stop
         if avg_epoch_loss < best_loss - config.early_stopping_threshold:
             best_loss = avg_epoch_loss
             patience_counter = 0
@@ -312,7 +318,10 @@ def train_supervised(config: TrainingConfig):
             sys.stdout.flush()
         else:
             patience_counter += 1
-            if patience_counter >= config.early_stopping_patience:
+            if (
+                config.early_stopping_enabled
+                and patience_counter >= config.early_stopping_patience
+            ):
                 logger.info("Early stopping triggered")
                 sys.stdout.flush()
                 break

@@ -16,7 +16,7 @@ class TrainingConfig:
     lora_alpha: int = 32
     lora_dropout: float = 0.05
     lora_target_modules: list[str] = field(
-        default_factory=lambda: ["q_proj", "v_proj", "k_proj", "out_proj"]
+        default_factory=lambda: ["q_proj", "v_proj", "k_proj", "out_proj", "fc1", "fc2"]
     )
 
     # Training
@@ -38,6 +38,7 @@ class TrainingConfig:
     eval_steps: int = 100
 
     # Early stopping
+    early_stopping_enabled: bool = True
     early_stopping_patience: int = 3
     early_stopping_threshold: float = 0.01
 
