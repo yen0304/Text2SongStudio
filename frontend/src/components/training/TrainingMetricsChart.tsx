@@ -34,12 +34,11 @@ const METRIC_CONFIG: Record<string, { label: string; color: string; format: (v: 
   loss: { label: 'Loss', color: '#3b82f6', format: (v) => v.toFixed(4) },
   learning_rate: { label: 'Learning Rate', color: '#10b981', format: (v) => v.toExponential(2) },
   grad_norm: { label: 'Gradient Norm', color: '#f59e0b', format: (v) => v.toFixed(3) },
-  epoch: { label: 'Epoch', color: '#8b5cf6', format: (v) => v.toFixed(1) },
   rewards_chosen: { label: 'Rewards (Chosen)', color: '#22c55e', format: (v) => v.toFixed(3) },
   rewards_rejected: { label: 'Rewards (Rejected)', color: '#ef4444', format: (v) => v.toFixed(3) },
 };
 
-export type MetricType = 'loss' | 'learning_rate' | 'grad_norm' | 'epoch' | 'rewards_chosen' | 'rewards_rejected';
+export type MetricType = 'loss' | 'learning_rate' | 'grad_norm' | 'rewards_chosen' | 'rewards_rejected';
 
 interface TrainingMetricsChartProps {
   /** Experiment ID */
@@ -164,13 +163,14 @@ export function TrainingMetricsChart({
     return Array.from(stepMap.values()).sort((a, b) => a.step - b.step);
   }, [metricsData, runIdArray, selectedMetric]);
 
-  // Get available metrics for selector
+  // Get available metrics for selector (exclude epoch since X-axis is already epoch)
   const availableMetrics = useMemo(() => {
     const available = new Set<string>();
     
     Object.values(metricsData).forEach((data) => {
       Object.keys(data.metrics).forEach((key) => {
-        if (data.metrics[key]?.length) {
+        // Exclude 'epoch' since the X-axis is already epoch-based
+        if (key !== 'epoch' && data.metrics[key]?.length) {
           available.add(key);
         }
       });
@@ -280,39 +280,38 @@ export function TrainingMetricsChart({
       </div>
 
       {/* Chart */}
-      <div className="bg-zinc-900/50 rounded-b-lg p-4" style={{ height }}>
+      <div className="bg-white rounded-b-lg p-4" style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 10, right: 30, left: 10, bottom: 10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
             <XAxis
               dataKey="step"
-              tick={{ fontSize: 11, fill: '#9ca3af' }}
+              tick={{ fontSize: 11, fill: '#374151' }}
               tickLine={false}
-              axisLine={{ stroke: '#374151' }}
-              label={{ value: 'Step', position: 'bottom', offset: -5, fill: '#9ca3af', fontSize: 11 }}
+              axisLine={{ stroke: '#d1d5db' }}
+              label={{ value: 'Epoch', position: 'bottom', offset: -5, fill: '#374151', fontSize: 11 }}
             />
             <YAxis
-              tick={{ fontSize: 11, fill: '#9ca3af' }}
+              tick={{ fontSize: 11, fill: '#374151' }}
               tickLine={false}
-              axisLine={{ stroke: '#374151' }}
+              axisLine={{ stroke: '#d1d5db' }}
               tickFormatter={(value) => config.format(value)}
               label={{ 
                 value: config.label, 
                 angle: -90, 
                 position: 'insideLeft', 
-                fill: '#9ca3af',
+                fill: '#374151',
                 fontSize: 11,
                 offset: 10
               }}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#1f2937',
-                border: '1px solid #374151',
+                backgroundColor: '#ffffff',
+                border: '1px solid #d1d5db',
                 borderRadius: '8px',
                 fontSize: '12px',
               }}
-              labelStyle={{ color: '#9ca3af' }}
+              labelStyle={{ color: '#374151' }}
               formatter={(value: number, name: string) => {
                 const runIndex = name.startsWith('run_') ? parseInt(name.split('_')[1]) : null;
                 const runId = runIndex !== null ? runIdArray[runIndex] : null;
@@ -321,7 +320,7 @@ export function TrainingMetricsChart({
                   : config.label;
                 return [config.format(value), displayName];
               }}
-              labelFormatter={(step) => `Step ${step}`}
+              labelFormatter={(step) => `Epoch ${step}`}
             />
             {runIdArray.length > 1 && (
               <Legend

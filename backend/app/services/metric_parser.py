@@ -39,10 +39,16 @@ METRIC_PATTERNS = {
         r"[Ss]tep[\s:]+(\d+).*?(?:loss|Loss)[=:\s]+([0-9]+\.?[0-9]*(?:[eE][+-]?\d+)?)",
         re.IGNORECASE,
     ),
-    # Epoch-based loss patterns
-    # e.g., "Epoch 2 average loss: 1.1234" or "Epoch 2: loss=1.1234"
-    "epoch_loss": re.compile(
-        r"[Ee]poch[\s:]+(\d+).*?(?:loss|Loss)[=:\s]+([0-9]+\.?[0-9]*(?:[eE][+-]?\d+)?)",
+    # Epoch average loss pattern (preferred - more precise value)
+    # e.g., "Epoch 2 average loss: 1.1234" or "INFO - Epoch 2 average loss: 9.0916"
+    "epoch_avg_loss": re.compile(
+        r"[Ee]poch[\s:]+(\d+)\s+average\s+loss[=:\s]+([0-9]+\.?[0-9]*(?:[eE][+-]?\d+)?)",
+        re.IGNORECASE,
+    ),
+    # Epoch progress bar loss (fallback - truncated value from tqdm)
+    # e.g., "Epoch 1: 100%|██████████| 1/1 [00:01<00:00,  1.65s/it, loss=9.09]"
+    "epoch_progress_loss": re.compile(
+        r"[Ee]poch[\s:]+(\d+).*\|.*loss[=:\s]+([0-9]+\.?[0-9]*(?:[eE][+-]?\d+)?)",
         re.IGNORECASE,
     ),
     # Learning rate patterns
@@ -124,21 +130,34 @@ class MetricParser:
                 {"step": step_num, "value": loss_value, "timestamp": timestamp}
             ]
 
-        # Try epoch-loss pattern
-        epoch_loss_match = METRIC_PATTERNS["epoch_loss"].search(line)
-        if epoch_loss_match and "loss" not in metrics:
-            epoch_num = int(epoch_loss_match.group(1))
-            loss_value = float(epoch_loss_match.group(2))
-            # Use epoch * 1000 as pseudo-step for epoch-based logging
-            pseudo_step = epoch_num * 1000
-            if self._current_step > 0:
-                pseudo_step = self._current_step
+        # Try epoch average loss pattern (preferred - more precise value)
+        epoch_avg_match = METRIC_PATTERNS["epoch_avg_loss"].search(line)
+        if epoch_avg_match and "loss" not in metrics:
+            epoch_num = int(epoch_avg_match.group(1))
+            loss_value = float(epoch_avg_match.group(2))
+            # Use epoch number directly as the step for epoch-based training
             metrics["loss"] = [
-                {"step": pseudo_step, "value": loss_value, "timestamp": timestamp}
+                {"step": epoch_num, "value": loss_value, "timestamp": timestamp}
             ]
             metrics["epoch"] = [
-                {"step": pseudo_step, "value": float(epoch_num), "timestamp": timestamp}
+                {"step": epoch_num, "value": float(epoch_num), "timestamp": timestamp}
             ]
+            self._current_step = epoch_num
+
+        # Try epoch progress bar loss pattern (fallback - less precise)
+        # Only use if we haven't found a loss value yet
+        epoch_progress_match = METRIC_PATTERNS["epoch_progress_loss"].search(line)
+        if epoch_progress_match and "loss" not in metrics:
+            epoch_num = int(epoch_progress_match.group(1))
+            loss_value = float(epoch_progress_match.group(2))
+            # Use epoch number directly as the step
+            metrics["loss"] = [
+                {"step": epoch_num, "value": loss_value, "timestamp": timestamp}
+            ]
+            metrics["epoch"] = [
+                {"step": epoch_num, "value": float(epoch_num), "timestamp": timestamp}
+            ]
+            self._current_step = epoch_num
 
         # Try HF trainer dict pattern
         hf_match = METRIC_PATTERNS["hf_trainer_dict"].search(line)
@@ -233,18 +252,17 @@ class MetricParser:
 
             line_metrics = self.parse_log_line(line, timestamp)
 
-            # Merge metrics
-            for metric_name, data_points in line_metrics.items():
-                if metric_name not in combined_metrics:
-                    combined_metrics[metric_name] = []
-                combined_metrics[metric_name].extend(data_points)
+            # Merge metrics with deduplication
+            combined_metrics = self.merge_metrics(combined_metrics, line_metrics)
 
         return combined_metrics
 
     @staticmethod
     def merge_metrics(existing: dict | None, new_metrics: ParsedMetrics) -> dict:
         """
-        Merge new metrics into existing metrics dict.
+        Merge new metrics into existing metrics dict, deduplicating by step.
+        When duplicate steps exist, keeps the value with more decimal precision
+        (assumes more precise values come from explicit logging vs progress bars).
 
         Args:
             existing: Existing metrics dict (from ExperimentRun.metrics)
@@ -259,7 +277,35 @@ class MetricParser:
         for metric_name, data_points in new_metrics.items():
             if metric_name not in existing:
                 existing[metric_name] = []
-            existing[metric_name].extend(data_points)
+
+            # Build a map by step, keeping more precise values
+            step_map: dict[int, dict] = {}
+            for point in existing[metric_name]:
+                step = point.get("step", 0)
+                step_map[step] = point
+
+            for point in data_points:
+                step = point.get("step", 0)
+                if step in step_map:
+                    # Compare precision: more decimal places = more precise
+                    existing_val = step_map[step].get("value", 0)
+                    new_val = point.get("value", 0)
+                    existing_str = str(existing_val)
+                    new_str = str(new_val)
+                    # Count digits after decimal point
+                    existing_decimals = (
+                        len(existing_str.split(".")[-1]) if "." in existing_str else 0
+                    )
+                    new_decimals = len(new_str.split(".")[-1]) if "." in new_str else 0
+                    if new_decimals > existing_decimals:
+                        step_map[step] = point
+                else:
+                    step_map[step] = point
+
+            # Convert back to sorted list
+            existing[metric_name] = sorted(
+                step_map.values(), key=lambda x: x.get("step", 0)
+            )
 
         return existing
 

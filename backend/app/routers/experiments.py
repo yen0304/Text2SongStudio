@@ -378,7 +378,7 @@ async def create_run(
     run = ExperimentRun(
         experiment_id=experiment_id,
         name=data.name or f"run-{run_count + 1}",
-        config=data.config or experiment.config,
+        config={**(experiment.config or {}), **(data.config or {})},
         status=RunStatus.PENDING,
     )
     db.add(run)
@@ -458,9 +458,13 @@ async def get_run_metrics(
 ):
     """Get time-series metrics for a specific run.
 
-    Returns metrics from the ExperimentRun.metrics JSON field for visualization.
+    Parses metrics fresh from the training logs for accurate visualization.
     Supports filtering by metric type and step range.
     """
+    import zlib
+    from app.models.training_log import TrainingLog
+    from app.services.metric_parser import MetricParser
+
     # Verify experiment exists
     result = await db.execute(select(Experiment).where(Experiment.id == experiment_id))
     if not result.scalar_one_or_none():
@@ -478,8 +482,25 @@ async def get_run_metrics(
     if not run:
         raise HTTPException(status_code=404, detail="Run not found")
 
-    # Get metrics
-    metrics = run.metrics or {}
+    # Parse metrics fresh from training logs for accuracy
+    result = await db.execute(select(TrainingLog).where(TrainingLog.run_id == run_id))
+    training_log = result.scalar_one_or_none()
+
+    metrics = {}
+    if training_log and training_log.data:
+        try:
+            # Decompress log data
+            try:
+                log_data = zlib.decompress(training_log.data).decode("utf-8")
+            except zlib.error:
+                log_data = training_log.data.decode("utf-8")
+
+            # Parse metrics from logs
+            parser = MetricParser()
+            metrics = parser.parse_log_chunk(log_data)
+        except Exception as e:
+            # Fall back to cached metrics if parsing fails
+            metrics = run.metrics or {}
 
     # Filter by metric type if specified
     if metric_type:
