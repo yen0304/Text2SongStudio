@@ -30,13 +30,18 @@ class TestMetricPatterns:
         assert match
         assert match.group(2) == "1.5E+02"
 
-    def test_epoch_loss_pattern(self):
+    def test_epoch_loss_patterns(self):
         """Test epoch-loss pattern matching."""
-        pattern = METRIC_PATTERNS["epoch_loss"]
+        # Test epoch average loss pattern (preferred)
+        pattern_avg = METRIC_PATTERNS["epoch_avg_loss"]
+        assert pattern_avg.search("Epoch 2 average loss: 1.1234")
+        assert pattern_avg.search("INFO - Epoch 1 average loss: 9.0916")
 
-        assert pattern.search("Epoch 2 average loss: 1.1234")
-        assert pattern.search("epoch 1: loss=0.5678")
-        assert pattern.search("Epoch: 3 Loss: 1.234")
+        # Test epoch progress bar loss pattern (fallback)
+        pattern_progress = METRIC_PATTERNS["epoch_progress_loss"]
+        assert pattern_progress.search(
+            "Epoch 1: 100%|██████████| 1/1 [00:01<00:00, loss=9.09]"
+        )
 
     def test_learning_rate_pattern(self):
         """Test learning rate pattern matching."""
