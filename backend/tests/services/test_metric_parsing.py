@@ -372,3 +372,36 @@ class TestRealWorldLogFormats:
         assert len(metrics["loss"]) == 2
         assert "learning_rate" in metrics
         assert "grad_norm" in metrics
+
+    def test_musicgen_dpo_format(self, parser):
+        """Test parsing MusicGen DPO training log format with rewards."""
+        logs = """
+        Step 100: loss=0.5234, learning_rate=1.00e-04, grad_norm=1.2345, rewards/chosen=-1.5678, rewards/rejected=-2.3456
+        Step 200: loss=0.4567, learning_rate=9.50e-05, grad_norm=0.9876, rewards/chosen=-1.2345, rewards/rejected=-2.1234
+        """
+
+        metrics = parser.parse_log_chunk(logs)
+
+        assert "loss" in metrics
+        assert len(metrics["loss"]) == 2
+        assert "learning_rate" in metrics
+        assert "grad_norm" in metrics
+        assert "rewards_chosen" in metrics
+        assert "rewards_rejected" in metrics
+
+        # Check DPO rewards values
+        assert metrics["rewards_chosen"][0]["value"] == pytest.approx(-1.5678)
+        assert metrics["rewards_rejected"][0]["value"] == pytest.approx(-2.3456)
+
+    def test_epoch_average_loss_with_learning_rate(self, parser):
+        """Test parsing epoch average loss with learning rate."""
+        log = "Epoch 3 average loss: 1.2345, learning_rate=5.00e-05"
+
+        metrics = parser.parse_log_line(log)
+
+        assert "loss" in metrics
+        assert "epoch" in metrics
+        assert "learning_rate" in metrics
+        assert metrics["loss"][0]["value"] == pytest.approx(1.2345)
+        assert metrics["epoch"][0]["value"] == 3.0
+        assert metrics["learning_rate"][0]["value"] == pytest.approx(5e-5)
