@@ -53,7 +53,7 @@ describe('Lazy Components', () => {
     const { LazyRunComparison } = await import('@/components/lazy');
     
     const { container } = render(
-      <LazyRunComparison runs={[]} bestRunId={null} onClose={vi.fn()} />
+      <LazyRunComparison runs={[]} experimentId="exp-1" bestRunId={null} onClose={vi.fn()} />
     );
     
     // Should show loading skeleton

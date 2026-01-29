@@ -89,6 +89,7 @@ describe('RunComparison', () => {
     render(
       <RunComparison
         runs={mockRuns}
+        experimentId="exp-1"
         bestRunId="run-1"
         onClose={vi.fn()}
       />
@@ -103,6 +104,7 @@ describe('RunComparison', () => {
     const { container } = render(
       <RunComparison
         runs={[]}
+        experimentId="exp-1"
         bestRunId={null}
         onClose={vi.fn()}
       />
@@ -115,6 +117,7 @@ describe('RunComparison', () => {
     render(
       <RunComparison
         runs={mockRuns}
+        experimentId="exp-1"
         bestRunId="run-1"
         onClose={vi.fn()}
       />
@@ -129,6 +132,7 @@ describe('RunComparison', () => {
     render(
       <RunComparison
         runs={mockRuns}
+        experimentId="exp-1"
         bestRunId="run-1"
         onClose={vi.fn()}
       />
@@ -142,6 +146,7 @@ describe('RunComparison', () => {
     render(
       <RunComparison
         runs={mockRuns}
+        experimentId="exp-1"
         bestRunId="run-1"
         onClose={vi.fn()}
       />
@@ -156,6 +161,7 @@ describe('RunComparison', () => {
     const { user } = render(
       <RunComparison
         runs={mockRuns}
+        experimentId="exp-1"
         bestRunId="run-1"
         onClose={onClose}
       />
@@ -172,6 +178,7 @@ describe('RunComparison', () => {
     render(
       <RunComparison
         runs={mockRuns}
+        experimentId="exp-1"
         bestRunId="run-1"
         onClose={vi.fn()}
       />
@@ -185,6 +192,7 @@ describe('RunComparison', () => {
     render(
       <RunComparison
         runs={mockRuns}
+        experimentId="exp-1"
         bestRunId="run-1"
         onClose={vi.fn()}
       />
@@ -203,6 +211,7 @@ describe('RunComparison', () => {
     render(
       <RunComparison
         runs={mixedStatusRuns}
+        experimentId="exp-1"
         bestRunId={null}
         onClose={vi.fn()}
       />
@@ -221,6 +230,7 @@ describe('RunComparison', () => {
     render(
       <RunComparison
         runs={runsWithNullLoss}
+        experimentId="exp-1"
         bestRunId="run-2"
         onClose={vi.fn()}
       />
@@ -233,6 +243,7 @@ describe('RunComparison', () => {
     render(
       <RunComparison
         runs={mockRuns}
+        experimentId="exp-1"
         bestRunId="run-1"
         onClose={vi.fn()}
       />
@@ -246,6 +257,7 @@ describe('RunComparison', () => {
     render(
       <RunComparison
         runs={mockRuns}
+        experimentId="exp-1"
         bestRunId="run-1"
         onClose={vi.fn()}
       />
@@ -261,6 +273,7 @@ describe('RunComparison', () => {
     render(
       <RunComparison
         runs={singleRun}
+        experimentId="exp-1"
         bestRunId="run-1"
         onClose={vi.fn()}
       />
@@ -274,6 +287,7 @@ describe('RunComparison', () => {
     render(
       <RunComparison
         runs={mockRuns}
+        experimentId="exp-1"
         bestRunId="run-1"
         onClose={vi.fn()}
       />
