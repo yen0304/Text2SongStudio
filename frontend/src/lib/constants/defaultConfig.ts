@@ -17,6 +17,7 @@ export const DEFAULT_TRAINING_CONFIG = {
   lora_r: 16,
   lora_alpha: 32,
   lora_dropout: 0.05,
+  lora_target_modules: ['q_proj', 'v_proj', 'k_proj', 'out_proj', 'fc1', 'fc2'],
 
   // DPO
   dpo_beta: 0.1,
@@ -28,6 +29,7 @@ export const DEFAULT_TRAINING_CONFIG = {
   save_steps: 500,
   save_total_limit: 3,
   eval_steps: 100,
+  early_stopping_enabled: true,
   early_stopping_patience: 3,
   early_stopping_threshold: 0.01,
 } as const;

@@ -156,6 +156,11 @@ export function AdapterConfigTab({ trainingConfig }: AdapterConfigTabProps) {
             tooltip={HYPERPARAMETER_TOOLTIPS.eval_steps}
           />
           <ConfigItem
+            label="Early Stopping"
+            value={trainingConfig.early_stopping_enabled === false ? 'Disabled' : 'Enabled'}
+            tooltip={HYPERPARAMETER_TOOLTIPS.early_stopping_enabled}
+          />
+          <ConfigItem
             label="Early Stop Patience"
             value={trainingConfig.early_stopping_patience}
             tooltip={HYPERPARAMETER_TOOLTIPS.early_stopping_patience}
