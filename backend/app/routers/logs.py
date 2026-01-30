@@ -75,8 +75,9 @@ async def stream_logs(
         poll_interval = 0.2  # 200ms
         last_heartbeat = asyncio.get_event_loop().time()
 
-        async with async_session_factory() as session:
-            while True:
+        while True:
+            # Use a fresh session for each poll to avoid stale cached data
+            async with async_session_factory() as session:
                 # Check if run is still active
                 result = await session.execute(
                     select(ExperimentRun).where(ExperimentRun.id == run_id)
@@ -125,8 +126,8 @@ async def stream_logs(
                     yield "event: heartbeat\ndata: {}\n\n"
                     last_heartbeat = current_time
 
-                # Wait before polling again
-                await asyncio.sleep(poll_interval)
+            # Wait before polling again (outside of session context)
+            await asyncio.sleep(poll_interval)
 
     return StreamingResponse(
         event_generator(),

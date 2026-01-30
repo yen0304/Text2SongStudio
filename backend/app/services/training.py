@@ -128,6 +128,8 @@ class TrainingService:
             # Set environment with PYTHONPATH to find model.training module
             env = os.environ.copy()
             env["PYTHONPATH"] = str(BACKEND_ROOT)
+            # Disable Python output buffering for real-time log streaming
+            env["PYTHONUNBUFFERED"] = "1"
 
             # Start subprocess with pipe for stdout/stderr
             process = await asyncio.create_subprocess_exec(

@@ -242,7 +242,13 @@ def train_preference(config: TrainingConfig):
         policy_model.train()
         epoch_loss = 0.0
 
-        progress_bar = tqdm(train_loader, desc=f"Epoch {epoch + 1}", file=sys.stdout)
+        progress_bar = tqdm(
+            train_loader,
+            desc=f"Epoch {epoch + 1}",
+            file=sys.stdout,
+            dynamic_ncols=True,
+            mininterval=0.1,  # Update at least every 0.1 seconds for real-time streaming
+        )
         for batch_idx, batch in enumerate(progress_bar):
             # Move to device
             input_ids = batch["input_ids"].to(device)

@@ -93,7 +93,10 @@ class LogCaptureService:
             nonlocal accumulated_metrics, chunk_count
 
             while True:
-                chunk = await stream.read(4096)  # Read in 4KB chunks
+                # Read in small chunks for real-time streaming
+                # asyncio's StreamReader.read(n) returns as soon as any data is available
+                # (up to n bytes), it doesn't wait for exactly n bytes
+                chunk = await stream.read(1024)
                 if not chunk:
                     break
 
