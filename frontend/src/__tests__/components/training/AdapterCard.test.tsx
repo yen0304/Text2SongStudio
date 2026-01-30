@@ -7,6 +7,7 @@ const mockAdapter: Adapter = {
   id: 'adapter-1',
   name: 'Test Adapter',
   base_model: 'musicgen-small',
+  base_model_config: null,
   is_active: true,
   description: 'A test adapter for music generation',
   status: 'active',

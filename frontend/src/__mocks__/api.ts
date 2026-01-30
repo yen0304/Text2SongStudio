@@ -22,6 +22,7 @@ export const createMockAdapter = (overrides?: Partial<Adapter>): Adapter => ({
   name: 'Test Adapter',
   description: 'A test adapter',
   base_model: 'facebook/musicgen-small',
+  base_model_config: null,
   status: 'active',
   current_version: '1.0.0',
   config: {},
