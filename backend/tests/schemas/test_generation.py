@@ -146,11 +146,11 @@ class TestGenerationRequest:
         request = GenerationRequest(prompt_id=prompt_id, duration=30)
         assert request.duration == 30
 
-    def test_duration_out_of_range_raises_error(self):
-        """Test that duration out of range raises ValidationError."""
+    def test_duration_below_min_raises_error(self):
+        """Test that duration below minimum raises ValidationError."""
         prompt_id = uuid4()
         with pytest.raises(ValidationError) as exc_info:
-            GenerationRequest(prompt_id=prompt_id, duration=31)
+            GenerationRequest(prompt_id=prompt_id, duration=0)
         assert "duration" in str(exc_info.value)
 
     def test_request_with_adapter_id(self):

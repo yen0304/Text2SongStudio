@@ -80,11 +80,11 @@ class TestPromptAttributes:
             PromptAttributes(duration=0)
         assert "duration" in str(exc_info.value)
 
-    def test_duration_above_max_raises_error(self):
-        """Test that duration above 30 raises ValidationError."""
-        with pytest.raises(ValidationError) as exc_info:
-            PromptAttributes(duration=31)
-        assert "duration" in str(exc_info.value)
+    def test_duration_above_max_allowed(self):
+        """Test that duration above 30 is allowed (no max limit)."""
+        # Duration has no max limit now, user can choose freely
+        attrs = PromptAttributes(duration=120)
+        assert attrs.duration == 120
 
     def test_valid_primary_instruments(self):
         """Test valid instrument names are accepted."""

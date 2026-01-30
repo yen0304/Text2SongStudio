@@ -14,9 +14,9 @@ class TestSettings:
         settings = Settings()
         assert settings.app_name == "Text2Song Studio"
         assert settings.debug is False
-        assert settings.default_sample_rate == 44100
+        assert settings.default_sample_rate == 32000  # MusicGen outputs 32kHz audio
         assert settings.default_duration == 10
-        assert settings.max_duration == 30
+        assert settings.max_duration == 120  # 2 minutes max
         assert settings.max_samples_per_request == 4
 
     def test_database_url_async_conversion(self):
