@@ -9,6 +9,7 @@ from app.routers.health import router as health_router
 from app.routers.jobs import router as jobs_router
 from app.routers.logs import router as logs_router
 from app.routers.metrics import router as metrics_router
+from app.routers.models import router as models_router
 from app.routers.preferences import router as preferences_router
 from app.routers.prompts import router as prompts_router
 
@@ -28,6 +29,7 @@ __all__ = [
     "jobs_router",
     "logs_router",
     "metrics_router",
+    "models_router",
     # New feedback system (industry standard)
     "ratings_router",
     "preferences_router",

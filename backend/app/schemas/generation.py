@@ -12,7 +12,7 @@ class GenerationRequest(BaseModel):
     temperature: float = Field(1.0, ge=0.1, le=2.0)
     top_k: int = Field(250, ge=1, le=1000)
     top_p: float = Field(0.0, ge=0.0, le=1.0)
-    duration: int | None = Field(None, ge=1, le=30)
+    duration: int | None = Field(None, ge=1)  # No max limit, user chooses freely
 
 
 class GenerationJobResponse(BaseModel):

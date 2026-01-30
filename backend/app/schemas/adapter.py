@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from app.schemas.model import BaseModelConfigInfo
+
 
 class AdapterCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
@@ -30,6 +32,7 @@ class AdapterRead(BaseModel):
     name: str
     description: str | None = None
     base_model: str
+    base_model_config: BaseModelConfigInfo | None = None
     status: str = "active"
     current_version: str | None = None
     config: dict[str, Any] | None = None

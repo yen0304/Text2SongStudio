@@ -5,6 +5,7 @@ import { PromptEditor } from '@/components/PromptEditor';
 // Mock the api module with modular APIs
 const mockCreate = vi.fn();
 const mockList = vi.fn();
+const mockGetCurrent = vi.fn();
 vi.mock('@/lib/api', () => ({
   adaptersApi: {
     list: (...args: unknown[]) => mockList(...args),
@@ -15,6 +16,9 @@ vi.mock('@/lib/api', () => ({
   generationApi: {
     submit: vi.fn().mockResolvedValue({ id: 'job-1', status: 'queued' }),
     getStatus: vi.fn().mockResolvedValue({ id: 'job-1', status: 'completed', audio_ids: ['audio-1'] }),
+  },
+  modelsApi: {
+    getCurrent: (...args: unknown[]) => mockGetCurrent(...args),
   },
 }));
 
@@ -27,8 +31,20 @@ describe('PromptEditor', () => {
   beforeEach(() => {
     mockCreate.mockClear();
     mockList.mockClear();
+    mockGetCurrent.mockClear();
     mockCreate.mockResolvedValue({ id: 'prompt-1', text: 'test' });
     mockList.mockResolvedValue({ items: [], total: 0 });
+    mockGetCurrent.mockResolvedValue({
+      id: 'musicgen-small',
+      display_name: 'MusicGen Small',
+      hf_model_id: 'facebook/musicgen-small',
+      max_duration_seconds: 30,
+      recommended_duration_seconds: 10,
+      vram_requirement_gb: 4,
+      sample_rate: 32000,
+      description: 'Fast generation',
+      is_active: true,
+    });
     defaultProps.onPromptCreated.mockClear();
     defaultProps.onSamplesGenerated.mockClear();
   });
@@ -251,6 +267,159 @@ describe('PromptEditor', () => {
         select => select.querySelector('option[value="adapter-1"]')
       );
       expect(adapterSelect).toBeTruthy();
+    });
+  });
+
+  describe('duration limits', () => {
+    it('fetches current model config on mount', async () => {
+      render(<PromptEditor {...defaultProps} />);
+      
+      await waitFor(() => {
+        expect(mockGetCurrent).toHaveBeenCalled();
+      });
+    });
+
+    it('shows duration hint with model name', async () => {
+      render(<PromptEditor {...defaultProps} />);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Max: 30s for MusicGen Small/i)).toBeInTheDocument();
+      });
+    });
+
+    it('limits duration slider to model max', async () => {
+      const { container } = render(<PromptEditor {...defaultProps} />);
+      
+      await waitFor(() => {
+        // Find the duration slider (second range input after tempo)
+        const sliders = container.querySelectorAll('input[type="range"]');
+        const durationSlider = sliders[1]; // Second slider is duration
+        expect(durationSlider).toHaveAttribute('max', '30');
+      });
+    });
+
+    it('clamps duration when model has lower max', async () => {
+      // Mock a model with lower max duration
+      mockGetCurrent.mockResolvedValue({
+        id: 'musicgen-small',
+        display_name: 'MusicGen Small',
+        hf_model_id: 'facebook/musicgen-small',
+        max_duration_seconds: 20,
+        recommended_duration_seconds: 10,
+        vram_requirement_gb: 4,
+        sample_rate: 32000,
+        description: 'Fast generation',
+        is_active: true,
+      });
+      
+      const { container } = render(<PromptEditor {...defaultProps} />);
+      
+      await waitFor(() => {
+        const sliders = container.querySelectorAll('input[type="range"]');
+        const durationSlider = sliders[1];
+        expect(durationSlider).toHaveAttribute('max', '20');
+      });
+    });
+
+    it('shows warning when approaching max duration', async () => {
+      mockGetCurrent.mockResolvedValue({
+        id: 'musicgen-small',
+        display_name: 'MusicGen Small',
+        hf_model_id: 'facebook/musicgen-small',
+        max_duration_seconds: 30,
+        recommended_duration_seconds: 10,
+        vram_requirement_gb: 4,
+        sample_rate: 32000,
+        description: 'Fast generation',
+        is_active: true,
+      });
+      
+      const { container, user } = render(<PromptEditor {...defaultProps} />);
+      
+      // Wait for model config to load
+      await waitFor(() => {
+        expect(mockGetCurrent).toHaveBeenCalled();
+      });
+      
+      // Set duration to 80% of max (24 out of 30)
+      const durationInput = container.querySelector('input[type="number"]');
+      if (durationInput) {
+        await user.clear(durationInput);
+        await user.type(durationInput, '25');
+      }
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Approaching model limit/i)).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('adapter compatibility', () => {
+    it('shows compatible adapters as selectable', async () => {
+      mockList.mockResolvedValue({
+        items: [
+          { 
+            id: 'adapter-1', 
+            name: 'Compatible Adapter', 
+            current_version: '1.0', 
+            is_active: true,
+            base_model: 'musicgen-small',
+            base_model_config: { id: 'musicgen-small', display_name: 'MusicGen Small', max_duration_seconds: 30 }
+          },
+        ],
+        total: 1,
+      });
+      
+      render(<PromptEditor {...defaultProps} />);
+      
+      await waitFor(() => {
+        expect(screen.getByText('Compatible Adapter v1.0')).toBeInTheDocument();
+      });
+    });
+
+    it('shows incompatible adapters as disabled with hint', async () => {
+      mockList.mockResolvedValue({
+        items: [
+          { 
+            id: 'adapter-1', 
+            name: 'Incompatible Adapter', 
+            current_version: '1.0', 
+            is_active: true,
+            base_model: 'musicgen-large',
+            base_model_config: { id: 'musicgen-large', display_name: 'MusicGen Large', max_duration_seconds: 30 }
+          },
+        ],
+        total: 1,
+      });
+      
+      render(<PromptEditor {...defaultProps} />);
+      
+      await waitFor(() => {
+        // Should show the adapter with requires hint
+        expect(screen.getByText(/Requires MusicGen Large/i)).toBeInTheDocument();
+      });
+    });
+
+    it('shows help message when incompatible adapters exist', async () => {
+      mockList.mockResolvedValue({
+        items: [
+          { 
+            id: 'adapter-1', 
+            name: 'Incompatible Adapter', 
+            current_version: '1.0', 
+            is_active: true,
+            base_model: 'musicgen-medium',
+            base_model_config: { id: 'musicgen-medium', display_name: 'MusicGen Medium', max_duration_seconds: 30 }
+          },
+        ],
+        total: 1,
+      });
+      
+      render(<PromptEditor {...defaultProps} />);
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Some adapters are unavailable/i)).toBeInTheDocument();
+      });
     });
   });
 });

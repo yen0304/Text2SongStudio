@@ -5,6 +5,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.database import get_db
 from app.models import (
     Adapter,
@@ -14,6 +15,11 @@ from app.models import (
     PreferencePair,
     Prompt,
     QualityRating,
+)
+from app.models.model_registry import (
+    get_current_model_config,
+    get_model_config,
+    is_adapter_compatible,
 )
 from app.schemas import GenerationJobResponse, GenerationRequest
 from app.schemas.generation import (
@@ -27,6 +33,8 @@ router = APIRouter(prefix="/generate", tags=["generation"])
 
 SAMPLE_LABELS = ["A", "B", "C", "D", "E", "F", "G", "H"]
 
+settings = get_settings()
+
 
 @router.post("", response_model=GenerationJobResponse, status_code=201)
 async def submit_generation(
@@ -34,13 +42,38 @@ async def submit_generation(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
+    # Check if model is being switched
+    if GenerationService.is_switching():
+        raise HTTPException(
+            status_code=503,
+            detail="Model is being switched. Please wait and try again.",
+        )
+
+    # Get current model configuration (use runtime model, not settings)
+    current_model_name = GenerationService.get_current_model_name()
+    current_model_config = get_model_config(current_model_name)
+    if not current_model_config:
+        current_model_config = get_current_model_config()
+
+    # Validate duration against model limits
+    requested_duration = data.duration or settings.default_duration
+    if requested_duration > current_model_config.max_duration_seconds:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Duration {requested_duration}s exceeds model limit of "
+                f"{current_model_config.max_duration_seconds}s for "
+                f"{current_model_config.display_name}"
+            ),
+        )
+
     # Verify prompt exists
     result = await db.execute(select(Prompt).where(Prompt.id == data.prompt_id))
     prompt = result.scalar_one_or_none()
     if not prompt:
         raise HTTPException(status_code=404, detail="Prompt not found")
 
-    # Verify adapter is active (if provided)
+    # Verify adapter is active and compatible (if provided)
     if data.adapter_id:
         adapter_result = await db.execute(
             select(Adapter).where(Adapter.id == data.adapter_id)
@@ -52,6 +85,23 @@ async def submit_generation(
             raise HTTPException(
                 status_code=400,
                 detail="Cannot use inactive or archived adapter for generation",
+            )
+
+        # Validate adapter compatibility with current model (use runtime model)
+        if not is_adapter_compatible(adapter.base_model, current_model_name):
+            adapter_model_config = get_model_config(adapter.base_model)
+            adapter_model_name = (
+                adapter_model_config.display_name
+                if adapter_model_config
+                else adapter.base_model
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Adapter '{adapter.name}' was trained on {adapter_model_name} "
+                    f"and is not compatible with the currently loaded model "
+                    f"({current_model_config.display_name})"
+                ),
             )
 
     # Create job

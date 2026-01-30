@@ -17,9 +17,25 @@ interface RunComparisonProps {
 
 function formatDuration(start: string | null, end: string | null): string {
   if (!start) return '-';
-  const startDate = new Date(start);
-  const endDate = end ? new Date(end) : new Date();
+  
+  // Backend returns UTC times without timezone suffix
+  // Append 'Z' if not present to ensure correct UTC parsing
+  const normalizeToUTC = (dateStr: string) => {
+    if (dateStr.endsWith('Z') || dateStr.includes('+') || dateStr.includes('-', 10)) {
+      return dateStr;
+    }
+    return dateStr + 'Z';
+  };
+  
+  const startDate = new Date(normalizeToUTC(start));
+  const endDate = end ? new Date(normalizeToUTC(end)) : new Date();
+  
   const diffMs = endDate.getTime() - startDate.getTime();
+  
+  // Handle edge cases: negative or very small differences
+  if (diffMs < 0) return '-';
+  if (diffMs < 60000) return '<1m';
+  
   const diffMins = Math.floor(diffMs / 60000);
   
   if (diffMins < 60) return `${diffMins}m`;

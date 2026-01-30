@@ -38,6 +38,7 @@ export interface SubmitGenerationRequest {
   prompt_id: string;
   num_samples?: number;
   adapter_id?: string;
+  duration?: number;  // Audio duration in seconds (1-120)
 }
 
 // Job Feedback Types

@@ -2,11 +2,15 @@
  * Adapter-related types
  */
 
+import type { BaseModelConfigInfo } from './models';
+
 export interface Adapter {
   id: string;
   name: string;
   description: string | null;
   base_model: string;
+  /** Model configuration info for the base model this adapter was trained on */
+  base_model_config: BaseModelConfigInfo | null;
   status: 'active' | 'archived';
   current_version: string | null;
   config: Record<string, unknown> | null;

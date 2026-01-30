@@ -47,4 +47,5 @@ export {
   experimentsApi,
   abTestsApi,
   metricsApi,
+  modelsApi,
 } from './modules';

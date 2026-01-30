@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { adaptersApi, promptsApi, generationApi, type Adapter, type PromptAttributes } from '@/lib/api';
+import { adaptersApi, promptsApi, generationApi, modelsApi, type Adapter, type PromptAttributes, type ModelConfig } from '@/lib/api';
 
 const STYLE_OPTIONS = [
   { value: '', label: 'Any style' },
@@ -137,15 +137,32 @@ export function PromptEditor({ onPromptCreated, onSamplesGenerated }: PromptEdit
   const [style, setStyle] = useState('');
   const [mood, setMood] = useState('');
   const [tempo, setTempo] = useState(120);
+  const [duration, setDuration] = useState(10);  // Audio duration in seconds
   const [primaryInstruments, setPrimaryInstruments] = useState<string[]>([]);
   const [secondaryInstruments, setSecondaryInstruments] = useState<string[]>([]);
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [numSamples, setNumSamples] = useState(2);
   const [selectedAdapter, setSelectedAdapter] = useState('');
   const [adapters, setAdapters] = useState<Adapter[]>([]);
+  const [currentModelConfig, setCurrentModelConfig] = useState<ModelConfig | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [jobStatus, setJobStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Helper to check if an adapter is compatible with the current model
+  const isAdapterCompatible = (adapter: Adapter): boolean => {
+    if (!currentModelConfig) return true; // Assume compatible if no model config yet
+    // Compare base_model (short id like "musicgen-small") with current model id
+    return adapter.base_model === currentModelConfig.id ||
+           adapter.base_model === currentModelConfig.hf_model_id;
+  };
+
+  // Separate adapters into compatible and incompatible groups
+  const compatibleAdapters = adapters.filter(a => a.is_active && isAdapterCompatible(a));
+  const incompatibleAdapters = adapters.filter(a => a.is_active && !isAdapterCompatible(a));
+
+  // Get max duration from current model config
+  const maxDuration = currentModelConfig?.max_duration_seconds ?? 30;
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories((prev) =>
@@ -175,6 +192,16 @@ export function PromptEditor({ onPromptCreated, onSamplesGenerated }: PromptEdit
   };
 
   useEffect(() => {
+    // Fetch current model config
+    modelsApi.getCurrent()
+      .then((config) => {
+        setCurrentModelConfig(config);
+        // Clamp duration if it exceeds model max
+        setDuration((prev) => Math.min(prev, config.max_duration_seconds));
+      })
+      .catch(() => {});
+    
+    // Fetch adapters
     adaptersApi.list({ activeOnly: true }).then((response) => setAdapters(response.items)).catch(() => {});
   }, []);
 
@@ -208,6 +235,7 @@ export function PromptEditor({ onPromptCreated, onSamplesGenerated }: PromptEdit
         prompt_id: prompt.id,
         num_samples: numSamples,
         adapter_id: selectedAdapter || undefined,
+        duration: duration,
       });
 
       setJobStatus('Generating audio...');
@@ -285,6 +313,38 @@ export function PromptEditor({ onPromptCreated, onSamplesGenerated }: PromptEdit
             value={tempo}
             onChange={(e) => setTempo(Number(e.target.value))}
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2">Duration (seconds)</label>
+          <div className="flex items-center gap-3">
+            <input
+              type="range"
+              min={1}
+              max={maxDuration}
+              value={Math.min(duration, maxDuration)}
+              onChange={(e) => setDuration(Number(e.target.value))}
+              className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer"
+            />
+            <input
+              type="number"
+              min={1}
+              max={maxDuration}
+              value={duration}
+              onChange={(e) => {
+                const val = parseInt(e.target.value) || 1;
+                setDuration(Math.min(Math.max(1, val), maxDuration));
+              }}
+              className="w-20 px-2 py-1 text-sm border rounded-md bg-background text-center"
+              placeholder="sec"
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Max: {maxDuration}s for {currentModelConfig?.display_name ?? 'current model'}
+            {duration > maxDuration * 0.8 && (
+              <span className="text-amber-500 ml-2">⚠ Approaching model limit</span>
+            )}
+          </p>
         </div>
 
         <div>
@@ -369,17 +429,37 @@ export function PromptEditor({ onPromptCreated, onSamplesGenerated }: PromptEdit
 
           <div>
             <label className="block text-sm font-medium mb-2">LoRA Adapter</label>
-            <Select
-              options={[
-                { value: '', label: 'None (base model)' },
-                ...adapters.filter((a) => a.is_active).map((a) => ({
-                  value: a.id,
-                  label: `${a.name}${a.current_version ? ` v${a.current_version}` : ''}`,
-                })),
-              ]}
+            <select
               value={selectedAdapter}
               onChange={(e) => setSelectedAdapter(e.target.value)}
-            />
+              className="w-full px-3 py-2 text-sm border rounded-md bg-background"
+            >
+              <option value="">None (base model)</option>
+              {compatibleAdapters.length > 0 && (
+                <optgroup label="Compatible Adapters">
+                  {compatibleAdapters.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}{a.current_version ? ` v${a.current_version}` : ''}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {incompatibleAdapters.length > 0 && (
+                <optgroup label="Incompatible (different model)">
+                  {incompatibleAdapters.map((a) => (
+                    <option key={a.id} value={a.id} disabled>
+                      🔒 {a.name} (Requires {a.base_model_config?.display_name ?? a.base_model})
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+            {incompatibleAdapters.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Some adapters are unavailable because they require a different model.
+                Change model in Settings to access them.
+              </p>
+            )}
           </div>
         </div>
 

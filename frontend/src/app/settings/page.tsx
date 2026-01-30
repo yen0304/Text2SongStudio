@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect, useCallback } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,9 +13,55 @@ import {
   Cpu,
   HardDrive,
   RefreshCw,
+  Info,
 } from 'lucide-react';
+import { modelsApi, type ModelConfig } from '@/lib/api';
+import { ModelSwitchingModal } from '@/components/ModelSwitchingModal';
 
 export default function SettingsPage() {
+  const [models, setModels] = useState<ModelConfig[]>([]);
+  const [currentModelId, setCurrentModelId] = useState<string>('');
+  const [selectedModelId, setSelectedModelId] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSwitchModalOpen, setIsSwitchModalOpen] = useState(false);
+  const [switchSuccess, setSwitchSuccess] = useState<string | null>(null);
+
+  const fetchModels = async () => {
+    try {
+      const response = await modelsApi.list();
+      setModels(response.models);
+      setCurrentModelId(response.current_model);
+      setSelectedModelId(response.current_model);
+    } catch (err) {
+      console.error('Failed to fetch models:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchModels();
+  }, []);
+
+  const handleSwitchModel = () => {
+    if (selectedModelId === currentModelId) return;
+    setSwitchSuccess(null);
+    setIsSwitchModalOpen(true);
+  };
+
+  const handleSwitchComplete = useCallback((success: boolean, newModelId?: string) => {
+    setIsSwitchModalOpen(false);
+    if (success && newModelId) {
+      setSwitchSuccess(`Successfully switched to ${models.find(m => m.id === newModelId)?.display_name || newModelId}`);
+      setCurrentModelId(newModelId);
+      setSelectedModelId(newModelId);
+      // Refresh models list
+      fetchModels();
+    }
+  }, [models]);
+
+  const selectedModel = models.find((m) => m.id === selectedModelId);
+  const hasModelChanged = selectedModelId !== currentModelId;
   return (
     <div className="space-y-6">
       <PageHeader
@@ -109,26 +156,92 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Base Model</label>
-              <select className="w-full h-10 px-3 rounded-md border border-input bg-background">
-                <option value="musicgen-small">MusicGen Small</option>
-                <option value="musicgen-medium">MusicGen Medium</option>
-                <option value="musicgen-large">MusicGen Large</option>
+              <select 
+                className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                value={selectedModelId}
+                onChange={(e) => setSelectedModelId(e.target.value)}
+                disabled={isLoading}
+              >
+                {models.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.display_name}
+                    {model.id === currentModelId && ' (Active)'}
+                  </option>
+                ))}
               </select>
             </div>
+
+            {/* Model Capabilities Display */}
+            {selectedModel && (
+              <div className="p-3 bg-muted rounded-lg space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Info size={14} />
+                  Model Capabilities
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Max Duration:</span>
+                    <span>{selectedModel.max_duration_seconds}s</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Recommended:</span>
+                    <span>{selectedModel.recommended_duration_seconds}s</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">VRAM Required:</span>
+                    <span>{selectedModel.vram_requirement_gb} GB</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Sample Rate:</span>
+                    <span>{selectedModel.sample_rate / 1000} kHz</span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">{selectedModel.description}</p>
+              </div>
+            )}
+
             <div>
               <label className="text-sm font-medium mb-2 block">Model Cache Directory</label>
-              <Input defaultValue="./model_cache" />
+              <Input defaultValue="./model_cache" disabled />
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm">Enable Model Caching</span>
-              <input type="checkbox" defaultChecked className="h-4 w-4" />
+              <input type="checkbox" defaultChecked className="h-4 w-4" disabled />
             </div>
-            <Button className="w-full" variant="outline">
+
+            {switchSuccess && (
+              <div className="p-3 border border-green-500/50 bg-green-500/10 rounded-lg">
+                <p className="text-sm text-green-600">✓ {switchSuccess}</p>
+              </div>
+            )}
+
+            {hasModelChanged && (
+              <div className="p-3 border border-blue-500/50 bg-blue-500/10 rounded-lg">
+                <p className="text-sm text-blue-600">
+                  Click &quot;Switch Model&quot; to load the selected model. This may take several minutes for larger models.
+                </p>
+              </div>
+            )}
+
+            <Button 
+              className="w-full" 
+              variant={hasModelChanged ? "default" : "outline"}
+              disabled={!hasModelChanged}
+              onClick={handleSwitchModel}
+            >
               <RefreshCw size={16} className="mr-2" />
-              Reload Model
+              {hasModelChanged ? 'Switch Model' : 'Model Active'}
             </Button>
           </CardContent>
         </Card>
+
+        {/* Model Switching Modal */}
+        <ModelSwitchingModal
+          isOpen={isSwitchModalOpen}
+          modelId={selectedModelId}
+          modelDisplayName={selectedModel?.display_name || selectedModelId}
+          onComplete={handleSwitchComplete}
+        />
 
         {/* Training Settings */}
         <Card>

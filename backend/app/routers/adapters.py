@@ -14,6 +14,7 @@ from app.config import get_settings
 from app.database import get_db
 from app.models.adapter import Adapter, AdapterVersion
 from app.models.experiment import ExperimentRun
+from app.models.model_registry import get_model_config
 from app.schemas.adapter import (
     AdapterCreate,
     AdapterDetailRead,
@@ -24,9 +25,22 @@ from app.schemas.adapter import (
     AdapterUpdate,
     AdapterVersionRead,
 )
+from app.schemas.model import BaseModelConfigInfo
 
 router = APIRouter(prefix="/adapters", tags=["adapters"])
 settings = get_settings()
+
+
+def _get_base_model_config_info(base_model: str) -> BaseModelConfigInfo | None:
+    """Get model config info for embedding in adapter response."""
+    config = get_model_config(base_model)
+    if config:
+        return BaseModelConfigInfo(
+            id=config.id,
+            display_name=config.display_name,
+            max_duration_seconds=config.max_duration_seconds,
+        )
+    return None
 
 
 @router.get("", response_model=AdapterListResponse)
@@ -61,6 +75,7 @@ async def list_adapters(
                 name=a.name,
                 description=a.description,
                 base_model=a.base_model,
+                base_model_config=_get_base_model_config_info(a.base_model),
                 status=a.status,
                 current_version=a.current_version,
                 config=a.config,
@@ -121,6 +136,7 @@ async def get_adapter(
         name=adapter.name,
         description=adapter.description,
         base_model=adapter.base_model,
+        base_model_config=_get_base_model_config_info(adapter.base_model),
         status=adapter.status,
         current_version=adapter.current_version,
         config=adapter.config,

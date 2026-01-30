@@ -11,6 +11,7 @@ from app.models.prompt import Prompt
 
 # New feedback models (industry standard RLHF)
 from app.models.quality_rating import QualityRating
+from app.models.system_setting import SystemSetting
 from app.models.training_log import TrainingLog
 
 __all__ = [
@@ -36,4 +37,5 @@ __all__ = [
     "ABTestPair",
     "ABTestStatus",
     "TrainingLog",
+    "SystemSetting",
 ]

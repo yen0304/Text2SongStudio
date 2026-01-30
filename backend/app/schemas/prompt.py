@@ -84,7 +84,7 @@ class PromptAttributes(BaseModel):
     primary_instruments: list[str] | None = None
     secondary_instruments: list[str] | None = None
     mood: str | None = None
-    duration: int | None = Field(None, ge=1, le=30)
+    duration: int | None = Field(None, ge=1)  # No max limit, user chooses freely
 
     @field_validator("primary_instruments")
     @classmethod

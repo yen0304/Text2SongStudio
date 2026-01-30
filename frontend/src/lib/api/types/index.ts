@@ -14,6 +14,7 @@ export * from './datasets';
 export * from './experiments';
 export * from './ab-tests';
 export * from './metrics';
+export * from './models';
 export * from './logs';
 
 // New feedback types (industry standard RLHF)
