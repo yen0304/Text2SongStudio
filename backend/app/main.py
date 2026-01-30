@@ -16,12 +16,14 @@ from app.routers import (
     jobs_router,
     logs_router,
     metrics_router,
+    models_router,
     preferences_router,
     prompts_router,
     # New feedback system (industry standard)
     ratings_router,
     tags_router,
 )
+from app.services.generation import GenerationService
 
 settings = get_settings()
 
@@ -30,6 +32,8 @@ settings = get_settings()
 async def lifespan(_app: FastAPI):
     # Startup
     await init_db()
+    # Load persisted model selection from database
+    await GenerationService.initialize()
     yield
     # Shutdown
 
@@ -62,6 +66,7 @@ app.include_router(ab_tests_router)
 app.include_router(jobs_router)
 app.include_router(logs_router)
 app.include_router(metrics_router)
+app.include_router(models_router)
 # New feedback system (industry standard)
 app.include_router(ratings_router)
 app.include_router(preferences_router)
