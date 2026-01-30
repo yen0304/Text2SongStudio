@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     adapters_dir: str = "./adapters"
 
     # Generation
-    default_sample_rate: int = 44100
+    default_sample_rate: int = 32000  # MusicGen outputs 32kHz audio
     default_duration: int = 10
     max_duration: int = 30
     max_samples_per_request: int = 4
