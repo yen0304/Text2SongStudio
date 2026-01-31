@@ -63,8 +63,11 @@ export function ExperimentConfigForm({
 
   const getFieldValue = (field: keyof ExperimentConfig): string | number | boolean | undefined => {
     const value = config[field];
-    if (value !== undefined) return value;
-    return DEFAULT_TRAINING_CONFIG[field as keyof typeof DEFAULT_TRAINING_CONFIG];
+    if (value !== undefined && !Array.isArray(value)) return value;
+    // Skip array fields (like lora_target_modules) as they're handled separately
+    if (field === 'lora_target_modules') return undefined;
+    const defaultValue = DEFAULT_TRAINING_CONFIG[field as keyof typeof DEFAULT_TRAINING_CONFIG];
+    return defaultValue as string | number | boolean | undefined;
   };
 
   const applyPreset = (presetKey: PresetKey) => {

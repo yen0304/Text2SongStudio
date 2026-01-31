@@ -58,6 +58,7 @@ export interface TrainingConfig {
   save_steps?: number;
   save_total_limit?: number;
   eval_steps?: number;
+  early_stopping_enabled?: boolean;
   early_stopping_patience?: number;
   early_stopping_threshold?: number;
   
