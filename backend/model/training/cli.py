@@ -31,6 +31,8 @@ def train_command(args):
             lora_r=args.lora_r,
             lora_alpha=args.lora_alpha,
             lora_dropout=args.lora_dropout,
+            lora_target_modules=args.lora_target_modules
+            or ["q_proj", "v_proj", "k_proj", "out_proj", "fc1", "fc2"],
             dpo_beta=args.beta,
             gradient_accumulation_steps=args.gradient_accumulation_steps,
             warmup_steps=args.warmup_steps,
@@ -158,6 +160,12 @@ def main():
     train_parser.add_argument("--lora-r", type=int, default=16)
     train_parser.add_argument("--lora-alpha", type=int, default=32)
     train_parser.add_argument("--lora-dropout", type=float, default=0.05)
+    train_parser.add_argument(
+        "--lora-target-modules",
+        nargs="+",
+        default=None,
+        help="Target modules for LoRA (e.g., q_proj v_proj k_proj out_proj fc1 fc2)",
+    )
     train_parser.add_argument("--beta", type=float, default=0.1, help="DPO beta")
     train_parser.add_argument("--gradient-accumulation-steps", type=int, default=4)
     train_parser.add_argument("--warmup-steps", type=int, default=100)

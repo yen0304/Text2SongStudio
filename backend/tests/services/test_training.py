@@ -118,6 +118,23 @@ class TestTrainingServiceBuildCommand:
         assert "--lora-alpha" in cmd
         assert "32" in cmd
 
+    def test_build_command_with_lora_target_modules(self):
+        """Test building command with custom LoRA target modules."""
+        from app.services.training import TrainingService
+
+        cmd = TrainingService._build_training_command(
+            dataset_path="/path/to/dataset",
+            dataset_type=DatasetType.SUPERVISED,
+            output_dir="/path/to/output",
+            adapter_name="test-adapter",
+            config={"lora_target_modules": ["q_proj", "v_proj", "k_proj"]},
+        )
+
+        assert "--lora-target-modules" in cmd
+        assert "q_proj" in cmd
+        assert "v_proj" in cmd
+        assert "k_proj" in cmd
+
     def test_build_command_with_base_model(self):
         """Test building command with custom base model."""
         from app.services.training import TrainingService

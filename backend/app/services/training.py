@@ -249,6 +249,8 @@ class TrainingService:
             cmd.extend(["--lora-alpha", str(config["lora_alpha"])])
         if config.get("lora_dropout") is not None:
             cmd.extend(["--lora-dropout", str(config["lora_dropout"])])
+        if config.get("lora_target_modules"):
+            cmd.extend(["--lora-target-modules"] + config["lora_target_modules"])
         if config.get("base_model") is not None:
             cmd.extend(["--base-model", str(config["base_model"])])
         if config.get("dpo_beta") is not None:
