@@ -55,15 +55,17 @@ class TestTrainingServiceBuildCommand:
         assert "preference" in cmd
 
     def test_build_command_with_epochs(self):
-        """Test building command with epochs config."""
+        """Test building command with epochs config (legacy field name)."""
         from app.services.training import TrainingService
 
+        # Note: The service now uses num_epochs instead of epochs
+        # This test is kept for backward compatibility documentation
         cmd = TrainingService._build_training_command(
             dataset_path="/path/to/dataset",
             dataset_type=DatasetType.SUPERVISED,
             output_dir="/path/to/output",
             adapter_name="test-adapter",
-            config={"epochs": 5},
+            config={"num_epochs": 5},
         )
 
         assert "--epochs" in cmd
@@ -116,6 +118,23 @@ class TestTrainingServiceBuildCommand:
         assert "--lora-alpha" in cmd
         assert "32" in cmd
 
+    def test_build_command_with_lora_target_modules(self):
+        """Test building command with custom LoRA target modules."""
+        from app.services.training import TrainingService
+
+        cmd = TrainingService._build_training_command(
+            dataset_path="/path/to/dataset",
+            dataset_type=DatasetType.SUPERVISED,
+            output_dir="/path/to/output",
+            adapter_name="test-adapter",
+            config={"lora_target_modules": ["q_proj", "v_proj", "k_proj"]},
+        )
+
+        assert "--lora-target-modules" in cmd
+        assert "q_proj" in cmd
+        assert "v_proj" in cmd
+        assert "k_proj" in cmd
+
     def test_build_command_with_base_model(self):
         """Test building command with custom base model."""
         from app.services.training import TrainingService
@@ -151,7 +170,7 @@ class TestTrainingServiceBuildCommand:
         from app.services.training import TrainingService
 
         config = {
-            "epochs": 10,
+            "num_epochs": 10,
             "batch_size": 16,
             "learning_rate": 0.0001,
             "lora_r": 8,
@@ -175,6 +194,286 @@ class TestTrainingServiceBuildCommand:
         assert "--lora-alpha" in cmd
         assert "--base-model" in cmd
         assert "--beta" in cmd
+
+    def test_build_command_with_num_epochs(self):
+        """Test building command with num_epochs config (new field name)."""
+        from app.services.training import TrainingService
+
+        cmd = TrainingService._build_training_command(
+            dataset_path="/path/to/dataset",
+            dataset_type=DatasetType.SUPERVISED,
+            output_dir="/path/to/output",
+            adapter_name="test-adapter",
+            config={"num_epochs": 10},
+        )
+
+        assert "--epochs" in cmd
+        assert "10" in cmd
+
+    def test_build_command_with_lora_dropout(self):
+        """Test building command with lora_dropout config."""
+        from app.services.training import TrainingService
+
+        cmd = TrainingService._build_training_command(
+            dataset_path="/path/to/dataset",
+            dataset_type=DatasetType.SUPERVISED,
+            output_dir="/path/to/output",
+            adapter_name="test-adapter",
+            config={"lora_dropout": 0.1},
+        )
+
+        assert "--lora-dropout" in cmd
+        assert "0.1" in cmd
+
+    def test_build_command_with_gradient_accumulation_steps(self):
+        """Test building command with gradient_accumulation_steps config."""
+        from app.services.training import TrainingService
+
+        cmd = TrainingService._build_training_command(
+            dataset_path="/path/to/dataset",
+            dataset_type=DatasetType.SUPERVISED,
+            output_dir="/path/to/output",
+            adapter_name="test-adapter",
+            config={"gradient_accumulation_steps": 8},
+        )
+
+        assert "--gradient-accumulation-steps" in cmd
+        assert "8" in cmd
+
+    def test_build_command_with_warmup_steps(self):
+        """Test building command with warmup_steps config."""
+        from app.services.training import TrainingService
+
+        cmd = TrainingService._build_training_command(
+            dataset_path="/path/to/dataset",
+            dataset_type=DatasetType.SUPERVISED,
+            output_dir="/path/to/output",
+            adapter_name="test-adapter",
+            config={"warmup_steps": 200},
+        )
+
+        assert "--warmup-steps" in cmd
+        assert "200" in cmd
+
+    def test_build_command_with_weight_decay(self):
+        """Test building command with weight_decay config."""
+        from app.services.training import TrainingService
+
+        cmd = TrainingService._build_training_command(
+            dataset_path="/path/to/dataset",
+            dataset_type=DatasetType.SUPERVISED,
+            output_dir="/path/to/output",
+            adapter_name="test-adapter",
+            config={"weight_decay": 0.02},
+        )
+
+        assert "--weight-decay" in cmd
+        assert "0.02" in cmd
+
+    def test_build_command_with_max_grad_norm(self):
+        """Test building command with max_grad_norm config."""
+        from app.services.training import TrainingService
+
+        cmd = TrainingService._build_training_command(
+            dataset_path="/path/to/dataset",
+            dataset_type=DatasetType.SUPERVISED,
+            output_dir="/path/to/output",
+            adapter_name="test-adapter",
+            config={"max_grad_norm": 0.5},
+        )
+
+        assert "--max-grad-norm" in cmd
+        assert "0.5" in cmd
+
+    def test_build_command_with_fp16(self):
+        """Test building command with fp16 config."""
+        from app.services.training import TrainingService
+
+        cmd = TrainingService._build_training_command(
+            dataset_path="/path/to/dataset",
+            dataset_type=DatasetType.SUPERVISED,
+            output_dir="/path/to/output",
+            adapter_name="test-adapter",
+            config={"fp16": True},
+        )
+
+        assert "--fp16" in cmd
+        assert "true" in cmd
+
+    def test_build_command_with_fp16_disabled(self):
+        """Test building command with fp16 disabled."""
+        from app.services.training import TrainingService
+
+        cmd = TrainingService._build_training_command(
+            dataset_path="/path/to/dataset",
+            dataset_type=DatasetType.SUPERVISED,
+            output_dir="/path/to/output",
+            adapter_name="test-adapter",
+            config={"fp16": False},
+        )
+
+        assert "--fp16" in cmd
+        assert "false" in cmd
+
+    def test_build_command_with_save_steps(self):
+        """Test building command with save_steps config."""
+        from app.services.training import TrainingService
+
+        cmd = TrainingService._build_training_command(
+            dataset_path="/path/to/dataset",
+            dataset_type=DatasetType.SUPERVISED,
+            output_dir="/path/to/output",
+            adapter_name="test-adapter",
+            config={"save_steps": 1000},
+        )
+
+        assert "--save-steps" in cmd
+        assert "1000" in cmd
+
+    def test_build_command_with_save_total_limit(self):
+        """Test building command with save_total_limit config."""
+        from app.services.training import TrainingService
+
+        cmd = TrainingService._build_training_command(
+            dataset_path="/path/to/dataset",
+            dataset_type=DatasetType.SUPERVISED,
+            output_dir="/path/to/output",
+            adapter_name="test-adapter",
+            config={"save_total_limit": 5},
+        )
+
+        assert "--save-total-limit" in cmd
+        assert "5" in cmd
+
+    def test_build_command_with_eval_steps(self):
+        """Test building command with eval_steps config."""
+        from app.services.training import TrainingService
+
+        cmd = TrainingService._build_training_command(
+            dataset_path="/path/to/dataset",
+            dataset_type=DatasetType.SUPERVISED,
+            output_dir="/path/to/output",
+            adapter_name="test-adapter",
+            config={"eval_steps": 200},
+        )
+
+        assert "--eval-steps" in cmd
+        assert "200" in cmd
+
+    def test_build_command_with_early_stopping_enabled(self):
+        """Test building command with early_stopping_enabled config."""
+        from app.services.training import TrainingService
+
+        cmd = TrainingService._build_training_command(
+            dataset_path="/path/to/dataset",
+            dataset_type=DatasetType.SUPERVISED,
+            output_dir="/path/to/output",
+            adapter_name="test-adapter",
+            config={"early_stopping_enabled": True},
+        )
+
+        assert "--early-stopping-enabled" in cmd
+        assert "true" in cmd
+
+    def test_build_command_with_early_stopping_disabled(self):
+        """Test building command with early_stopping_enabled=False."""
+        from app.services.training import TrainingService
+
+        cmd = TrainingService._build_training_command(
+            dataset_path="/path/to/dataset",
+            dataset_type=DatasetType.SUPERVISED,
+            output_dir="/path/to/output",
+            adapter_name="test-adapter",
+            config={"early_stopping_enabled": False},
+        )
+
+        assert "--early-stopping-enabled" in cmd
+        assert "false" in cmd
+
+    def test_build_command_with_early_stopping_patience(self):
+        """Test building command with early_stopping_patience config."""
+        from app.services.training import TrainingService
+
+        cmd = TrainingService._build_training_command(
+            dataset_path="/path/to/dataset",
+            dataset_type=DatasetType.SUPERVISED,
+            output_dir="/path/to/output",
+            adapter_name="test-adapter",
+            config={"early_stopping_patience": 5},
+        )
+
+        assert "--early-stopping-patience" in cmd
+        assert "5" in cmd
+
+    def test_build_command_with_early_stopping_threshold(self):
+        """Test building command with early_stopping_threshold config."""
+        from app.services.training import TrainingService
+
+        cmd = TrainingService._build_training_command(
+            dataset_path="/path/to/dataset",
+            dataset_type=DatasetType.SUPERVISED,
+            output_dir="/path/to/output",
+            adapter_name="test-adapter",
+            config={"early_stopping_threshold": 0.001},
+        )
+
+        assert "--early-stopping-threshold" in cmd
+        assert "0.001" in cmd
+
+    def test_build_command_with_all_new_config_options(self):
+        """Test building command with all new config options."""
+        from app.services.training import TrainingService
+
+        config = {
+            "num_epochs": 5,
+            "batch_size": 4,
+            "learning_rate": 5e-5,
+            "lora_r": 32,
+            "lora_alpha": 64,
+            "lora_dropout": 0.1,
+            "base_model": "facebook/musicgen-medium",
+            "dpo_beta": 0.15,
+            "gradient_accumulation_steps": 8,
+            "warmup_steps": 200,
+            "weight_decay": 0.02,
+            "max_grad_norm": 0.5,
+            "fp16": True,
+            "save_steps": 1000,
+            "save_total_limit": 5,
+            "eval_steps": 200,
+            "early_stopping_enabled": True,
+            "early_stopping_patience": 5,
+            "early_stopping_threshold": 0.005,
+        }
+
+        cmd = TrainingService._build_training_command(
+            dataset_path="/path/to/dataset",
+            dataset_type=DatasetType.PREFERENCE,
+            output_dir="/path/to/output",
+            adapter_name="test-adapter",
+            config=config,
+        )
+
+        # Verify all new parameters are included
+        assert "--epochs" in cmd
+        assert "--batch-size" in cmd
+        assert "--lr" in cmd
+        assert "--lora-r" in cmd
+        assert "--lora-alpha" in cmd
+        assert "--lora-dropout" in cmd
+        assert "--base-model" in cmd
+        assert "--beta" in cmd
+        assert "--gradient-accumulation-steps" in cmd
+        assert "--warmup-steps" in cmd
+        assert "--weight-decay" in cmd
+        assert "--max-grad-norm" in cmd
+        assert "--fp16" in cmd
+        assert "--save-steps" in cmd
+        assert "--save-total-limit" in cmd
+        assert "--eval-steps" in cmd
+        assert "--early-stopping-enabled" in cmd
+        assert "--early-stopping-patience" in cmd
+        assert "--early-stopping-threshold" in cmd
 
 
 class TestTrainingServiceRegisterAdapter:

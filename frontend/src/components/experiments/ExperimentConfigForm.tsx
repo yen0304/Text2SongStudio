@@ -21,6 +21,7 @@ export interface ExperimentConfig {
   lora_r?: number;
   lora_alpha?: number;
   lora_dropout?: number;
+  lora_target_modules?: string[];
   // DPO
   dpo_beta?: number;
   // Hardware
@@ -29,6 +30,8 @@ export interface ExperimentConfig {
   save_steps?: number;
   save_total_limit?: number;
   eval_steps?: number;
+  // Early stopping
+  early_stopping_enabled?: boolean;
   early_stopping_patience?: number;
   early_stopping_threshold?: number;
 }
@@ -60,8 +63,11 @@ export function ExperimentConfigForm({
 
   const getFieldValue = (field: keyof ExperimentConfig): string | number | boolean | undefined => {
     const value = config[field];
-    if (value !== undefined) return value;
-    return DEFAULT_TRAINING_CONFIG[field as keyof typeof DEFAULT_TRAINING_CONFIG];
+    if (value !== undefined && !Array.isArray(value)) return value;
+    // Skip array fields (like lora_target_modules) as they're handled separately
+    if (field === 'lora_target_modules') return undefined;
+    const defaultValue = DEFAULT_TRAINING_CONFIG[field as keyof typeof DEFAULT_TRAINING_CONFIG];
+    return defaultValue as string | number | boolean | undefined;
   };
 
   const applyPreset = (presetKey: PresetKey) => {
@@ -405,6 +411,15 @@ export function ExperimentConfigForm({
         {/* Early Stopping */}
         <ConfigCard title="Early Stopping" icon={<HardDrive size={18} />}>
           <ConfigFormItem
+            label="Enable Early Stopping"
+            name="early_stopping_enabled"
+            value={getFieldValue('early_stopping_enabled')}
+            onChange={(v) => updateField('early_stopping_enabled', v as boolean)}
+            tooltip={HYPERPARAMETER_TOOLTIPS.early_stopping_enabled}
+            type="boolean"
+            disabled={disabled}
+          />
+          <ConfigFormItem
             label="Patience"
             name="early_stopping_patience"
             value={getFieldValue('early_stopping_patience')}
@@ -412,7 +427,7 @@ export function ExperimentConfigForm({
             tooltip={HYPERPARAMETER_TOOLTIPS.early_stopping_patience}
             type="number"
             min={1}
-            disabled={disabled}
+            disabled={disabled || getFieldValue('early_stopping_enabled') === false}
           />
           <ConfigFormItem
             label="Threshold"
@@ -423,7 +438,7 @@ export function ExperimentConfigForm({
             type="number"
             step={0.001}
             min={0}
-            disabled={disabled}
+            disabled={disabled || getFieldValue('early_stopping_enabled') === false}
           />
         </ConfigCard>
       </div>

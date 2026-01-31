@@ -7,7 +7,9 @@
  * - Content-Type headers management
  */
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// Use relative path '/api' to leverage Next.js rewrites and avoid CORS issues
+// Falls back to direct backend URL if NEXT_PUBLIC_API_URL is explicitly set
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export class ApiError extends Error {
   constructor(
