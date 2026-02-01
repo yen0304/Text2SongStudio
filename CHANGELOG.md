@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Prompt Templates & Favorites System** (2026-01-29)
+  - New `prompt_templates` table for reusable prompt configurations
+  - New `favorites` table with polymorphic design (supports prompts and audio)
+  - PostgreSQL full-text search with tsvector index on prompts
+  - 6 built-in system templates (Electronic Dance, Ambient Chill, Cinematic Epic, Jazz Lounge, Pop Upbeat, Classical Piano)
+  - Backend API: `/templates` CRUD with category filtering
+  - Backend API: `/favorites` CRUD with check/toggle endpoints
+  - Backend API: `GET /prompts/search` with FTS and attribute filters
+  - Frontend: `TemplateSelector` component with system/user templates
+  - Frontend: `SaveTemplateDialog` for saving prompts as templates
+  - Frontend: `FavoriteButton` toggle component
+  - Frontend: `/favorites` page with tabs (All/Prompts/Audio)
+  - Frontend: `PromptSearchBar` with style, mood, tempo filters
+  - Sidebar navigation: Favorites quick access (Heart icon)
 - **Training Loss Visualization** (2026-01-28)
   - Real-time training metric visualization on experiment detail page
   - New `TrainingMetricsChart` component with line charts using Recharts
