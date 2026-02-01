@@ -123,3 +123,13 @@ class PromptListResponse(BaseModel):
     total: int
     page: int
     limit: int
+
+
+class PromptSearchResponse(BaseModel):
+    """Response for prompt search with relevance ranking."""
+
+    items: list[PromptResponse]
+    total: int
+    page: int
+    limit: int
+    query: str | None = None  # Echo back the search query

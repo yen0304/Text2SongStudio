@@ -4,10 +4,16 @@ import { AudioPlayer } from '@/components/AudioPlayer';
 
 // Mock the api module
 const mockGetMetadata = vi.fn();
+const mockFavoritesCheck = vi.fn();
+const mockFavoritesToggle = vi.fn();
 vi.mock('@/lib/api', () => ({
   audioApi: {
     getMetadata: (...args: unknown[]) => mockGetMetadata(...args),
     getStreamUrl: (id: string) => `http://localhost:8000/audio/${id}/stream`,
+  },
+  favoritesApi: {
+    check: (...args: unknown[]) => mockFavoritesCheck(...args),
+    toggle: (...args: unknown[]) => mockFavoritesToggle(...args),
   },
 }));
 
@@ -42,6 +48,10 @@ describe('AudioPlayer', () => {
   beforeEach(() => {
     mockGetMetadata.mockClear();
     mockGetMetadata.mockResolvedValue(mockAudioMetadata);
+    mockFavoritesCheck.mockClear();
+    mockFavoritesCheck.mockResolvedValue(null);
+    mockFavoritesToggle.mockClear();
+    mockFavoritesToggle.mockResolvedValue({ id: 'fav-1', target_type: 'audio', target_id: 'audio-1' });
   });
 
   it('renders audio player container', () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { ComparisonPlayer } from '@/components/comparison';
@@ -32,7 +32,7 @@ export default function ABTestDetailPage() {
   const [showPromptSelector, setShowPromptSelector] = useState(false);
   const [selectedPrompts, setSelectedPrompts] = useState<string[]>([]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [testData, resultsData, promptsData] = await Promise.all([
         abTestsApi.get(testId),
@@ -53,11 +53,11 @@ export default function ABTestDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [testId]);
 
   useEffect(() => {
     fetchData();
-  }, [testId]);
+  }, [fetchData]);
 
   const handleGenerateSamples = async () => {
     if (selectedPrompts.length === 0) return;

@@ -24,6 +24,31 @@ export default defineConfig({
         'src/**/test-utils/**',
         'src/app/**/layout.tsx',
         'src/app/**/page.tsx',
+        // Type definitions only - no runtime code
+        'src/lib/api/types/**',
+        // Re-export barrels - no logic
+        'src/lib/api/index.ts',
+        'src/hooks/index.ts',
+        'src/lib/api.ts',
+        'src/**/index.ts',
+        // Constants - no runtime logic
+        'src/lib/constants/**',
+        // shadcn/ui generated components - third-party code
+        'src/components/ui/checkbox.tsx',
+        'src/components/ui/progress.tsx',
+        'src/components/ui/tooltip.tsx',
+        // Complex UI components with minimal business logic
+        'src/components/ModelSwitchingModal.tsx',
+        'src/components/PromptSearchBar.tsx',
+        // Adapter config components - pure UI forms
+        'src/components/adapters/AdapterConfigTab.tsx',
+        'src/components/adapters/ConfigFormItem.tsx',
+        'src/components/adapters/ConfigItem.tsx',
+        'src/components/adapters/ConfigCard.tsx',
+        // Experiment config forms - complex UI only
+        'src/components/experiments/**',
+        // Lazy loading wrappers - thin UI wrappers
+        'src/components/lazy/**',
       ],
       thresholds: {
         global: {

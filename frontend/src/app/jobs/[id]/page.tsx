@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { AudioPlayer } from '@/components/AudioPlayer';
 import { FeedbackPanel } from '@/components/FeedbackPanel';
 import { JobFeedbackPanel } from '@/components/JobFeedbackPanel';
+import { FavoriteButton } from '@/components/FavoriteButton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -221,7 +222,26 @@ export default function JobDetailPage() {
       {/* Audio samples */}
       {job.audio_ids.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
+          <div className="space-y-4">
+            {job.prompt_id && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">Prompt</CardTitle>
+                    <FavoriteButton
+                      targetType="prompt"
+                      targetId={job.prompt_id}
+                      size="sm"
+                    />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    {job.prompt_preview || 'No prompt text'}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
             <AudioPlayer audioIds={job.audio_ids} />
           </div>
           <div>

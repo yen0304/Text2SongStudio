@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { PromptEditor } from '@/components/PromptEditor';
 import { AudioPlayer } from '@/components/AudioPlayer';
 import { FeedbackPanel } from '@/components/FeedbackPanel';
+import { FavoriteButton } from '@/components/FavoriteButton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -68,6 +69,18 @@ export default function GeneratePage() {
           <div className="space-y-6">
             {audioSamples.length > 0 ? (
               <>
+                {currentPromptId && (
+                  <Card>
+                    <CardContent className="flex items-center justify-between py-3">
+                      <span className="text-sm text-muted-foreground">Current Prompt</span>
+                      <FavoriteButton
+                        targetType="prompt"
+                        targetId={currentPromptId}
+                        size="sm"
+                      />
+                    </CardContent>
+                  </Card>
+                )}
                 <AudioPlayer audioIds={audioSamples} />
                 <FeedbackPanel audioIds={audioSamples} promptId={currentPromptId} />
               </>

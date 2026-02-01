@@ -2,7 +2,7 @@
  * Central module exports for API
  */
 
-export { promptsApi } from './prompts';
+export { promptsApi, type SearchPromptsParams, type SearchPromptsResponse } from './prompts';
 export { audioApi } from './audio';
 export { generationApi, type ListJobsParams } from './generation';
 export { adaptersApi } from './adapters';
@@ -12,6 +12,8 @@ export { abTestsApi, type ListABTestsParams } from './ab-tests';
 export { metricsApi } from './metrics';
 export { modelsApi } from './models';
 export { logsApi } from './logs';
+export { templatesApi } from './templates';
+export { favoritesApi } from './favorites';
 
 // Feedback APIs (industry standard RLHF)
 export { ratingsApi } from './ratings';

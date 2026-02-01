@@ -5,9 +5,11 @@ from app.models.audio import AudioSample
 from app.models.audio_tag import ALL_TAGS, NEGATIVE_TAGS, POSITIVE_TAGS, AudioTag
 from app.models.dataset import Dataset, DatasetType
 from app.models.experiment import Experiment, ExperimentRun, ExperimentStatus, RunStatus
+from app.models.favorite import Favorite, TargetType
 from app.models.job import GenerationJob, JobStatus
 from app.models.preference_pair import PreferencePair
 from app.models.prompt import Prompt
+from app.models.prompt_template import PromptTemplate
 
 # New feedback models (industry standard RLHF)
 from app.models.quality_rating import QualityRating
@@ -38,4 +40,7 @@ __all__ = [
     "ABTestStatus",
     "TrainingLog",
     "SystemSetting",
+    "PromptTemplate",
+    "Favorite",
+    "TargetType",
 ]

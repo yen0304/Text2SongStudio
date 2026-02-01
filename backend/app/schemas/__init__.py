@@ -51,6 +51,14 @@ from app.schemas.experiment import (
     MetricDataPoint,
     RunMetricsResponse,
 )
+from app.schemas.favorite import (
+    FavoriteCreate,
+    FavoriteListResponse,
+    FavoriteResponse,
+    FavoriteUpdate,
+    FavoriteWithDetailsResponse,
+    TargetType,
+)
 from app.schemas.generation import (
     GenerationJobResponse,
     GenerationRequest,
@@ -70,6 +78,7 @@ from app.schemas.prompt import (
     PromptCreate,
     PromptListResponse,
     PromptResponse,
+    PromptSearchResponse,
 )
 
 # New feedback schemas (industry standard)
@@ -78,6 +87,12 @@ from app.schemas.quality_rating import (
     QualityRatingListResponse,
     QualityRatingResponse,
     QualityRatingStats,
+)
+from app.schemas.template import (
+    TemplateCreate,
+    TemplateListResponse,
+    TemplateResponse,
+    TemplateUpdate,
 )
 from app.schemas.training_log import (
     TrainingLogChunk,
@@ -149,4 +164,18 @@ __all__ = [
     "TrainingLogDone",
     "MetricDataPoint",
     "RunMetricsResponse",
+    # Templates
+    "TemplateCreate",
+    "TemplateUpdate",
+    "TemplateResponse",
+    "TemplateListResponse",
+    # Favorites
+    "FavoriteCreate",
+    "FavoriteUpdate",
+    "FavoriteResponse",
+    "FavoriteWithDetailsResponse",
+    "FavoriteListResponse",
+    "TargetType",
+    # Search
+    "PromptSearchResponse",
 ]

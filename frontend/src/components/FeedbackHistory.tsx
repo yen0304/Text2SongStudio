@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ export function FeedbackHistory({ initialAudioId }: FeedbackHistoryProps) {
   const [page, setPage] = useState(1);
   const limit = 20;
 
-  const fetchFeedback = async () => {
+  const fetchFeedback = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -45,11 +45,11 @@ export function FeedbackHistory({ initialAudioId }: FeedbackHistoryProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [audioIdFilter, minRating, page, limit]);
 
   useEffect(() => {
     fetchFeedback();
-  }, [page]);
+  }, [fetchFeedback]);
 
   const handleSearch = () => {
     setPage(1);

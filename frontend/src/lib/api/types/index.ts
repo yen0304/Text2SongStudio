@@ -16,6 +16,8 @@ export * from './ab-tests';
 export * from './metrics';
 export * from './models';
 export * from './logs';
+export * from './templates';
+export * from './favorites';
 
 // New feedback types (industry standard RLHF)
 export * from './ratings';

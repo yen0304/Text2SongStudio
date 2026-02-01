@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
@@ -80,7 +80,7 @@ export default function ExperimentsPage() {
   const selectedDataset = datasets.find(d => d.id === selectedDatasetId);
   const isPreferenceDataset = selectedDataset?.type === 'preference';
 
-  const fetchExperiments = async () => {
+  const fetchExperiments = useCallback(async () => {
     try {
       const data = await experimentsApi.list({ include_archived: showArchived });
       setExperiments(data.items);
@@ -89,21 +89,21 @@ export default function ExperimentsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showArchived]);
 
-  const fetchDatasets = async () => {
+  const fetchDatasets = useCallback(async () => {
     try {
       const data = await datasetsApi.list();
       setDatasets(data.items);
     } catch (error) {
       console.error('Failed to fetch datasets:', error);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchExperiments();
     fetchDatasets();
-  }, [showArchived]);
+  }, [fetchExperiments, fetchDatasets]);
 
   const handleCreate = async () => {
     if (!newName.trim() || !selectedDatasetId) return;

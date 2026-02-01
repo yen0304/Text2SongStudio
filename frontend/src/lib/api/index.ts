@@ -48,4 +48,6 @@ export {
   abTestsApi,
   metricsApi,
   modelsApi,
+  templatesApi,
+  favoritesApi,
 } from './modules';

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { AdapterTimelineView, AdapterConfigTab } from '@/components/adapters';
@@ -45,7 +45,7 @@ export default function AdapterDetailPage() {
   const [savingName, setSavingName] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [adapterData, timelineData] = await Promise.all([
         adaptersApi.get(adapterId),
@@ -58,11 +58,11 @@ export default function AdapterDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [adapterId]);
 
   useEffect(() => {
     fetchData();
-  }, [adapterId]);
+  }, [fetchData]);
 
   const handleCreateVersion = async (e: React.FormEvent) => {
     e.preventDefault();
