@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,7 +47,7 @@ export default function DatasetsPage() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const fetchDatasets = async () => {
+  const fetchDatasets = useCallback(async () => {
     try {
       const data = await datasetsApi.list({ include_deleted: showDeleted });
       setDatasets(data.items);
@@ -56,11 +56,11 @@ export default function DatasetsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showDeleted]);
 
   useEffect(() => {
     fetchDatasets();
-  }, [showDeleted]);
+  }, [fetchDatasets]);
 
   const fetchStats = async (datasetId: string) => {
     if (stats[datasetId]) return;
