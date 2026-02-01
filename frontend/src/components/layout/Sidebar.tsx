@@ -18,6 +18,7 @@ import {
   MessageSquare,
   Menu,
   X,
+  Heart,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +34,7 @@ const navItems: NavItem[] = [
   { href: '/generate', label: 'Generate', icon: <Play size={20} />, shortcut: 'g' },
   { href: '/jobs', label: 'Jobs', icon: <ListTodo size={20} />, shortcut: 'j' },
   { href: '/feedback', label: 'Feedback', icon: <MessageSquare size={20} />, shortcut: 'f' },
+  { href: '/favorites', label: 'Favorites', icon: <Heart size={20} />, shortcut: 'v' },
   { href: '/experiments', label: 'Experiments', icon: <FlaskConical size={20} />, shortcut: 'e' },
   { href: '/adapters', label: 'Adapters', icon: <Plug size={20} />, shortcut: 'a' },
   { href: '/ab-tests', label: 'A/B Tests', icon: <GitCompare size={20} />, shortcut: 't' },

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FavoriteButton } from '@/components/FavoriteButton';
 import { audioApi, type AudioSample } from '@/lib/api';
 import { Play, Pause, SkipBack, SkipForward, Check, Volume2 } from 'lucide-react';
 
@@ -242,9 +243,18 @@ export function AudioPlayer({ audioIds }: AudioPlayerProps) {
 
         {/* Sample Info */}
         <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">
-            Sample {SAMPLE_LABELS[currentIndex]}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-foreground">
+              Sample {SAMPLE_LABELS[currentIndex]}
+            </span>
+            {audioIds[currentIndex] && (
+              <FavoriteButton
+                targetType="audio"
+                targetId={audioIds[currentIndex]}
+                size="sm"
+              />
+            )}
+          </div>
           {currentSample && (
             <span>
               {currentSample.duration_seconds.toFixed(1)}s @ {currentSample.sample_rate}Hz

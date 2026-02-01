@@ -6,7 +6,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { adaptersApi, promptsApi, generationApi, modelsApi, type Adapter, type PromptAttributes, type ModelConfig } from '@/lib/api';
+import { TemplateSelector } from '@/components/TemplateSelector';
+import { SaveTemplateDialog } from '@/components/SaveTemplateDialog';
+import { adaptersApi, promptsApi, generationApi, modelsApi, type Adapter, type PromptAttributes, type ModelConfig, type Template } from '@/lib/api';
 
 const STYLE_OPTIONS = [
   { value: '', label: 'Any style' },
@@ -148,6 +150,34 @@ export function PromptEditor({ onPromptCreated, onSamplesGenerated }: PromptEdit
   const [isGenerating, setIsGenerating] = useState(false);
   const [jobStatus, setJobStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showSaveTemplateDialog, setShowSaveTemplateDialog] = useState(false);
+
+  // Apply a template to the current form
+  const applyTemplate = (template: Template) => {
+    setText(template.text);
+    if (template.attributes) {
+      setStyle(template.attributes.style || '');
+      setMood(template.attributes.mood || '');
+      setTempo(template.attributes.tempo || 120);
+      setPrimaryInstruments(template.attributes.primary_instruments || []);
+      setSecondaryInstruments(template.attributes.secondary_instruments || []);
+      if (template.attributes.duration) {
+        setDuration(Math.min(template.attributes.duration, maxDuration));
+      }
+    }
+  };
+
+  // Get current attributes for saving as template
+  const getCurrentAttributes = (): PromptAttributes => {
+    const attrs: PromptAttributes = {};
+    if (style) attrs.style = style;
+    if (mood) attrs.mood = mood;
+    if (tempo) attrs.tempo = tempo;
+    if (duration) attrs.duration = duration;
+    if (primaryInstruments.length > 0) attrs.primary_instruments = primaryInstruments;
+    if (secondaryInstruments.length > 0) attrs.secondary_instruments = secondaryInstruments;
+    return attrs;
+  };
 
   // Helper to check if an adapter is compatible with the current model
   const isAdapterCompatible = (adapter: Adapter): boolean => {
@@ -276,13 +306,20 @@ export function PromptEditor({ onPromptCreated, onSamplesGenerated }: PromptEdit
   };
 
   return (
+    <>
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle>Create Music</CardTitle>
+        <TemplateSelector 
+          onSelectTemplate={applyTemplate}
+          onSaveAsTemplate={() => setShowSaveTemplateDialog(true)}
+          canSaveAsTemplate={text.trim().length > 0}
+          disabled={isGenerating}
+        />
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <label className="block text-sm font-medium mb-2">Description</label>
+          <label className="block text-sm font-medium mb-2">Description (prompt)</label>
           <Textarea
             placeholder="Describe the music you want to create... e.g., 'An upbeat electronic track with synth leads and a driving bassline'"
             value={text}
@@ -470,5 +507,13 @@ export function PromptEditor({ onPromptCreated, onSamplesGenerated }: PromptEdit
         </Button>
       </CardContent>
     </Card>
+
+    <SaveTemplateDialog
+      open={showSaveTemplateDialog}
+      onOpenChange={setShowSaveTemplateDialog}
+      promptText={text}
+      attributes={getCurrentAttributes()}
+    />
+    </>
   );
 }
