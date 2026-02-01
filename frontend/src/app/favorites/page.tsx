@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Heart, Music, FileText, Trash2 } from 'lucide-react';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,7 +14,7 @@ export default function FavoritesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'prompt' | 'audio'>('all');
 
-  const loadFavorites = async () => {
+  const loadFavorites = useCallback(async () => {
     setIsLoading(true);
     try {
       const targetType = activeTab === 'all' ? undefined : activeTab as TargetType;
@@ -25,11 +25,11 @@ export default function FavoritesPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [activeTab]);
 
   useEffect(() => {
     loadFavorites();
-  }, [activeTab]);
+  }, [loadFavorites]);
 
   const handleRemove = async (favoriteId: string) => {
     try {
@@ -48,7 +48,6 @@ export default function FavoritesPage() {
       <PageHeader
         title="Favorites"
         description="Your bookmarked prompts and audio samples"
-        icon={<Heart className="h-6 w-6 text-red-500" />}
       />
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
