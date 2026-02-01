@@ -11,6 +11,7 @@ from app.routers import (
     audio_router,
     datasets_router,
     experiments_router,
+    favorites_router,
     generation_router,
     health_router,
     jobs_router,
@@ -22,6 +23,7 @@ from app.routers import (
     # New feedback system (industry standard)
     ratings_router,
     tags_router,
+    templates_router,
 )
 from app.services.generation import GenerationService
 
@@ -71,3 +73,6 @@ app.include_router(models_router)
 app.include_router(ratings_router)
 app.include_router(preferences_router)
 app.include_router(tags_router)
+# Templates and Favorites
+app.include_router(templates_router)
+app.include_router(favorites_router)

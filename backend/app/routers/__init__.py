@@ -4,6 +4,7 @@ from app.routers.adapters import router as adapters_router
 from app.routers.audio import router as audio_router
 from app.routers.datasets import router as datasets_router
 from app.routers.experiments import router as experiments_router
+from app.routers.favorites import router as favorites_router
 from app.routers.generation import router as generation_router
 from app.routers.health import router as health_router
 from app.routers.jobs import router as jobs_router
@@ -16,6 +17,7 @@ from app.routers.prompts import router as prompts_router
 # New feedback system (industry standard)
 from app.routers.ratings import router as ratings_router
 from app.routers.tags import router as tags_router
+from app.routers.templates import router as templates_router
 
 __all__ = [
     "health_router",
@@ -34,4 +36,7 @@ __all__ = [
     "ratings_router",
     "preferences_router",
     "tags_router",
+    # Templates and Favorites
+    "templates_router",
+    "favorites_router",
 ]
